@@ -14,23 +14,32 @@ import java.util.Scanner;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 
-// TODO: add logging
+/**
+ * Implementation of the following real time phishing classifier:
+ * <a href="https://orbilu.uni.lu/bitstream/10993/20053/1/phishStorm-revised.pdf">
+ * https://orbilu.uni.lu/bitstream/10993/20053/1/phishStorm-revised.pdf
+ * </a>
+ * @author gergely.nagy
+ *
+ */
 public class URLSpout extends BaseRichSpout {
 
 	private static final long serialVersionUID = -6424905468176142975L;
+	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 
 	private static class SplitResult {
 		String first;
 		String result;
 	}
 
-	/** Number of tokens */
 	double N = 1024908267229.;
 	double _itervalues = 0.;
 	SpoutOutputCollector _collector;
@@ -42,7 +51,7 @@ public class URLSpout extends BaseRichSpout {
 	Set<String> RDurl = new HashSet<>();
 	Set<String> REMurl = new HashSet<>();
 	String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
-	String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
+	String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
 
 	@Override
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
@@ -58,7 +67,9 @@ public class URLSpout extends BaseRichSpout {
 	}
 
 	private PublicSuffixMatcher readPublicSuffixListFromFile() {
-		PublicSuffixMatcher matcher = new PublicSuffixMatcher(psDataFile);
+		String location = System.getProperty("ps-location", psDataFile);
+		PublicSuffixMatcher matcher = new PublicSuffixMatcher(location);
+		logger.info("Reading public suffix data from [{}] ...", location);
 		matcher.load();
 		return matcher;
 	}
@@ -66,6 +77,7 @@ public class URLSpout extends BaseRichSpout {
 	Map<String, Long> readCountFromFile() {
 		HashMap<String, Long> map = new HashMap<>();
 		String location = System.getProperty("count-location", countDataFile);
+		logger.info("Reading n-gram count data from [{}] ...", location);
 		try(Scanner scanner = new Scanner(new FileReader(location));) {
 			scan(map, scanner);
 		} catch (FileNotFoundException e) {
@@ -88,6 +100,7 @@ public class URLSpout extends BaseRichSpout {
 	public void nextTuple() {
 		if (_iterator.hasNext()) {
 			String URLWithScheme = _iterator.next();
+			logger.debug("Calculating relatedness for [{}]", URLWithScheme);
 			String URL = URLWithScheme.split("//")[1];
 			calculateRDurl(URL);
 			calculateREMurl(URL);
@@ -97,6 +110,7 @@ public class URLSpout extends BaseRichSpout {
 	void calculateRDurl(String URL) {
 		String mld = URL.split("/")[0];
 		String ps = _matcher.findPublicSuffix(mld);
+		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
 		RDurl.add(mld);
 		RDurl.add(StringUtils.substringBeforeLast(mld, "." + ps));
 	}
