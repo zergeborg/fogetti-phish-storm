@@ -21,6 +21,8 @@ import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
+import backtype.storm.tuple.Fields;
+import backtype.storm.tuple.Values;
 
 /**
  * Implementation of the following real time phishing classifier:
@@ -112,6 +114,7 @@ public class URLSpout extends BaseRichSpout {
 		String ps = _matcher.findPublicSuffix(mld);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
 		RDurl.add(mld);
+		_collector.emit(new Values(mld));
 		RDurl.add(StringUtils.substringBeforeLast(mld, "." + ps));
 	}
 
@@ -129,7 +132,11 @@ public class URLSpout extends BaseRichSpout {
 						for (String un : underscores) {
 							String[] dashes = un.split("-");
 							for (String dash : dashes) {
-								REMurl.addAll(segment(dash));
+								List<String> segments = segment(dash);
+								REMurl.addAll(segments);
+								for (String segment : segments) {
+									_collector.emit(new Values(segment));
+								}
 							}
 						}
 					}
@@ -195,6 +202,7 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
+		declarer.declare(new Fields("mld"));
 	}
 	
 }

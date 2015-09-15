@@ -1,11 +1,18 @@
 package fogetti.phish.storm.relatedness;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
+
+import backtype.storm.spout.SpoutOutputCollector;
 
 public class URLSpoutTest {
 
@@ -43,12 +50,20 @@ public class URLSpoutTest {
 	public void nextTuple() throws Exception {
 		// Given we want to measure relatedness in an URL
 		URLSpout spout = new URLSpout();
-		spout.open(null, null, null);
+		SpoutOutputCollector spy = getSpy();
+		spout.open(null, null, spy);
 
 		// When we call nextTuple
 		spout.nextTuple();
 
 		// Then it calculates the public suffix of the given URL
 		// and segments the words found in the URL
+		verify(spy, atLeast(1)).emit(anyObject());
+	}
+
+	protected SpoutOutputCollector getSpy() {
+		SpoutOutputCollector collector = new SpoutOutputCollector(mock(SpoutOutputCollector.class));
+		SpoutOutputCollector spy = spy(collector);
+		return spy;
 	}
 }
