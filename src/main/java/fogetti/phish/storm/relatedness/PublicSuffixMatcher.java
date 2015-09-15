@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.Stack;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.exception.URLMatchingFailedException;
 
@@ -22,29 +24,25 @@ public class PublicSuffixMatcher {
 		public List<String> labels = new ArrayList<>();
 
 		public String match(Domain domain) {
-			if (domain.labels.size() < labels.size())
-				return "";
-			boolean identical = false;
+			int ruleSize = labels.size();
+			int domainSize = domain.labels.size();
+			if (domainSize < ruleSize) return "";
 			Stack<String> ps = new Stack<>();
-			ListIterator<String> rulesIterator = labels.listIterator(labels.size());
-			ListIterator<String> domainsIterator = domain.labels.listIterator(domain.labels.size());
+			identical(ps, labels.listIterator(ruleSize), domain.labels.listIterator(domainSize));
+			return result(ps);
+		}
+
+		void identical(Stack<String> ps, ListIterator<String> rulesIterator, ListIterator<String> domainsIterator) {
+			boolean identical = false;
 			do {
-				identical = checkIdentical(identical, ps, rulesIterator, domainsIterator);
-			} while (previousValid(identical, rulesIterator, domainsIterator));
-			return StringUtils.substringBeforeLast(ps.stream().reduce("", (a,b) -> b + "." + a), ".");
+				identical = checkIdentical(identical, ps, rulesIterator.previous(), domainsIterator.previous());
+			} while (
+				previousValid(identical, rulesIterator, domainsIterator)
+			);
 		}
 
-		boolean previousValid(boolean identical, ListIterator<String> rulesIterator,
-				ListIterator<String> domainsIterator) {
-			return identical
-					&& rulesIterator.hasPrevious()
-					&& domainsIterator.hasPrevious();
-		}
-
-		private boolean checkIdentical(boolean identical, Stack<String> ps, ListIterator<String> rulesIterator,
-				ListIterator<String> domainsIterator) {
-			String prevRuleLabel = rulesIterator.previous();
-			String prevDomainLabel = domainsIterator.previous();
+		private boolean checkIdentical(boolean identical, Stack<String> ps, String prevRuleLabel,
+				String prevDomainLabel) {
 			if (prevRuleLabel.equals(prevDomainLabel))
 				identical = true;
 			if (prevRuleLabel.equals("*"))
@@ -52,6 +50,18 @@ public class PublicSuffixMatcher {
 			if (identical)
 				ps.push(prevDomainLabel);
 			return identical;
+		}
+		
+		boolean previousValid(boolean identical, ListIterator<String> rulesIterator,
+				ListIterator<String> domainsIterator) {
+			return identical
+					&& rulesIterator.hasPrevious()
+					&& domainsIterator.hasPrevious();
+		}
+
+		String result(Stack<String> ps) {
+			return StringUtils.substringBeforeLast(
+					ps.stream().reduce("", (a,b) -> b + "." + a), ".");
 		}
 
 		@Override
@@ -64,6 +74,8 @@ public class PublicSuffixMatcher {
 		public List<String> labels = new ArrayList<>();
 	}
 
+	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
+	
 	private final Set<Rule> rules = new HashSet<>();
 	private final String suffixDataLocation;
 	private volatile boolean loaded = false;
@@ -76,7 +88,7 @@ public class PublicSuffixMatcher {
 		try(Scanner scanner = new Scanner(new FileReader(suffixDataLocation));) {
 			scan(scanner);
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.error("Could not load the public suffix file", e);
 			throw new URLMatchingFailedException(e);
 		}
 		loaded = true;
