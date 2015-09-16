@@ -204,7 +204,7 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("mld"));
+		declarer.declare(new Fields("word"));
 	}
 	
 }

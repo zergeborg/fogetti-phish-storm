@@ -5,22 +5,22 @@ import org.freaknet.gtrends.api.GoogleTrendsClient;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 
-public class GoogleRelatedBolt extends GoogleBolt {
+public class GoogleRisingBolt extends GoogleBolt {
 
-	private static final long serialVersionUID = -2812645097124425765L;
+	private static final long serialVersionUID = -7853035759259306137L;
 
-	public GoogleRelatedBolt(GoogleTrendsClient client) {
+	public GoogleRisingBolt(GoogleTrendsClient client) {
 		super(client);
 	}
 
 	@Override
 	protected String section() {
-		return "Top searches";
+		return "Rising searches";
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("topsearches"));
+		declarer.declare(new Fields("risingsearches"));
 	}
 
 }
