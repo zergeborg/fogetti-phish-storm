@@ -34,7 +34,7 @@ public class URLBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("word"));
+		declarer.declare(new Fields("url"));
 	}
 
 }
