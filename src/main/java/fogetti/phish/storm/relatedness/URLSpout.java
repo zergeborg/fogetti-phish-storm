@@ -114,9 +114,11 @@ public class URLSpout extends BaseRichSpout {
 		String ps = _matcher.findPublicSuffix(mld);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
 		RDurl.add(mld);
+		logger.trace("Emitting [{}]", mld);
 		_collector.emit(new Values(mld));
 		String mldNoPs = StringUtils.substringBeforeLast(mld, "." + ps);
 		RDurl.add(mldNoPs);
+		logger.trace("Emitting [{}]", mldNoPs);
 		_collector.emit(new Values(mldNoPs));
 	}
 
@@ -137,6 +139,7 @@ public class URLSpout extends BaseRichSpout {
 								List<String> segments = segment(dash);
 								REMurl.addAll(segments);
 								for (String segment : segments) {
+									logger.trace("Emitting [{}]", segment);
 									_collector.emit(new Values(segment));
 								}
 							}
