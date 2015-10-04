@@ -8,7 +8,9 @@ import backtype.storm.StormSubmitter;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 import backtype.storm.utils.Utils;
+import fogetti.phish.storm.relatedness.BingSemBolt;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
+import fogetti.phish.storm.relatedness.IntersectionBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
 
@@ -28,6 +30,8 @@ public class TopologyEnd2End {
 		builder.setSpout("urlsource", new URLSpout(), 1);
 		builder.setBolt("urlsplit", new URLBolt(), 7).fieldsGrouping("urlsource", new Fields("word"));
 		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword), 7).fieldsGrouping("urlsplit", new Fields("url"));
+		builder.setBolt("bingrelatedkeywords", new BingSemBolt(), 7).fieldsGrouping("urlsplit", new Fields("url"));
+		builder.setBolt("intersection", new IntersectionBolt()).globalGrouping("googletrends").globalGrouping("bingrelatedkeywords");
 
 		Config conf = new Config();
 		conf.setDebug(true);

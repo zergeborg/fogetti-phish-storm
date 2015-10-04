@@ -5,6 +5,7 @@ import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
@@ -31,7 +32,7 @@ public class BingSemBolt extends BaseRichBolt {
 	private static final long serialVersionUID = -5744889615761052666L;
 	private static final Logger logger = LoggerFactory.getLogger(BingSemBolt.class);
 	private OutputCollector collector;
-	private IWebmasterApi api;
+	private transient IWebmasterApi api;
 	
 	public BingSemBolt() {
 		this.api = getApi();
@@ -44,6 +45,12 @@ public class BingSemBolt extends BaseRichBolt {
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
+		this.api = getApi();
+	}
+
+	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector, IWebmasterApi api) {
+		this.collector = collector;
+		this.api = api;
 	}
 
 	private IWebmasterApi getApi() {
@@ -69,7 +76,7 @@ public class BingSemBolt extends BaseRichBolt {
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
 		try {
 			String keyword = input.getString(0);
-			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(keyword, "hu", "hu-HU", startDate , endDate);
+			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(keyword, "", "", startDate , endDate);
 			collector.emit(input, new Values(calculateSearches(relatedKeywords)));
 			collector.ack(input);
 			logger.trace("Result [{}]", relatedKeywords);
@@ -78,7 +85,7 @@ public class BingSemBolt extends BaseRichBolt {
 		}
 	}
 	
-	private Object calculateSearches(ArrayOfKeyword relatedKeywords) {
+	private Set<String> calculateSearches(ArrayOfKeyword relatedKeywords) {
 		HashSet<String> result = new HashSet<>();
 		List<Keyword> keywords = relatedKeywords.getKeyword();
 		for (Keyword keyword : keywords) {

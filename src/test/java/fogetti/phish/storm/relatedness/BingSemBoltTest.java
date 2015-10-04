@@ -39,8 +39,8 @@ public class BingSemBoltTest {
 	@Before
 	public void setup() throws Exception {
 		paypal = "paypal";
-		country = "hu";
-		language = "hu-HU";
+		country = "";
+		language = "";
 		api = mock(IWebmasterApi.class);
 		bolt = new BingSemBolt(api);
 		DatatypeFactory factory = DatatypeFactory.newInstance();
@@ -88,7 +88,7 @@ public class BingSemBoltTest {
 		// When we send a request
 		when(api.getRelatedKeywords(paypal, country, language, startDate , endDate)).thenReturn(keywordArray);
 		OutputCollector collector = mock(OutputCollector.class);
-		bolt.prepare(null, null, collector);
+		bolt.prepare(null, null, collector, api);
 		bolt.execute(keyword, startDate, endDate);
 
 		// Then it succeeds
