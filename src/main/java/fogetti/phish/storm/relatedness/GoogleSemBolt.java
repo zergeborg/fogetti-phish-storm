@@ -2,6 +2,7 @@ package fogetti.phish.storm.relatedness;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -73,7 +74,7 @@ public class GoogleSemBolt extends BaseRichBolt {
 		}
 	}
 
-	private HashSet<String> calculateSearches(String searchresult) throws Exception {
+	private Set<String> calculateSearches(String searchresult) throws Exception {
 		HashSet<String> result = new HashSet<>();
 		GoogleTrendsCsvParser parser = new GoogleTrendsCsvParser(searchresult);
 		String topsearches = parser.getSectionAsString("Top searches", false);
