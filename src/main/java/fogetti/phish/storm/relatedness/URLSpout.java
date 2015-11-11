@@ -42,26 +42,26 @@ public class URLSpout extends BaseRichSpout {
 		String result;
 	}
 
-	double N = 1024908267229.;
-	double _itervalues = 0.;
-	SpoutOutputCollector _collector;
-	List<String> _urllist;
-	Iterator<String> _iterator;
-	PublicSuffixMatcher _matcher;
-	Map<String, List<String>> _memomap = new HashMap<>();
-	Map<String, Long> _lookup = new HashMap<>();
-	Set<String> RDurl = new HashSet<>();
-	Set<String> REMurl = new HashSet<>();
-	String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
-	String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
+	private double N = 1024908267229.;
+	private double itervalues = 0.;
+	private SpoutOutputCollector collector;
+	private List<String> urllist;
+	private Iterator<String> iterator;
+	private PublicSuffixMatcher matcher;
+	private Map<String, List<String>> memomap = new HashMap<>();
+	private Map<String, Long> lookup = new HashMap<>();
+	private Set<String> RDurl = new HashSet<>();
+	private Set<String> REMurl = new HashSet<>();
+	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
+	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
 
 	@Override
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
-		_collector = collector;
-		_urllist = readURLListFromFile();
-		_matcher = readPublicSuffixListFromFile();
-		_lookup = readCountFromFile();
-		_iterator = _urllist.iterator();
+		this.collector = collector;
+		this.urllist = readURLListFromFile();
+		this.matcher = readPublicSuffixListFromFile();
+		this.lookup = readCountFromFile();
+		this.iterator = urllist.iterator();
 	}
 
 	private List<String> readURLListFromFile() {
@@ -76,32 +76,36 @@ public class URLSpout extends BaseRichSpout {
 		return matcher;
 	}
 
-	Map<String, Long> readCountFromFile() {
+	private Map<String, Long> readCountFromFile() {
 		HashMap<String, Long> map = new HashMap<>();
 		String location = System.getProperty("count-location", countDataFile);
 		logger.info("Reading n-gram count data from [{}] ...", location);
+		load(map, location);
+		return map;
+	}
+
+	private void load(HashMap<String, Long> map, String location) {
 		try(Scanner scanner = new Scanner(new FileReader(location));) {
 			scan(map, scanner);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-		return map;
 	}
 
-	void scan(HashMap<String, Long> map, Scanner scanner) {
+	private void scan(HashMap<String, Long> map, Scanner scanner) {
 		while (scanner.hasNextLine()) {
 			String[] columns = scanner.nextLine().split("\\t");
 			Long value = Long.valueOf(columns[1]);
-			_itervalues += value;
+			itervalues += value;
 			map.put(columns[0], value);
 		}
 	}
 
 	@Override
 	public void nextTuple() {
-		if (_iterator.hasNext()) {
-			String URLWithScheme = _iterator.next();
+		if (iterator.hasNext()) {
+			String URLWithScheme = iterator.next();
 			logger.debug("Calculating relatedness for [{}]", URLWithScheme);
 			String URL = URLWithScheme.split("//")[1];
 			calculateRDurl(URL);
@@ -111,58 +115,86 @@ public class URLSpout extends BaseRichSpout {
 
 	void calculateRDurl(String URL) {
 		String mld = URL.split("/")[0];
-		String ps = _matcher.findPublicSuffix(mld);
+		String ps = matcher.findPublicSuffix(mld);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
 		RDurl.add(mld);
 		logger.trace("Emitting [{}]", mld);
-		_collector.emit(new Values(mld));
+		collector.emit(new Values(mld), mld);
 		String mldNoPs = StringUtils.substringBeforeLast(mld, "." + ps);
 		RDurl.add(mldNoPs);
 		logger.trace("Emitting [{}]", mldNoPs);
-		_collector.emit(new Values(mldNoPs));
+		collector.emit(new Values(mldNoPs), mldNoPs);
 	}
 
 	void calculateREMurl(String URL) {
 		String rem = StringUtils.substringAfter(URL, "/");
+		slashes(rem);
+	}
+
+	private void slashes(String rem) {
 		String[] slash = rem.split("/");
 		for (String sl : slash) {
-			String[] questions = sl.split("\\?");
-			for (String qu : questions) {
-				String[] dots = qu.split("\\.");
-				for (String dot : dots) {
-					String[] equals = dot.split("=");
-					for (String eq : equals) {
-						String[] underscores = eq.split("_");
-						for (String un : underscores) {
-							String[] dashes = un.split("-");
-							for (String dash : dashes) {
-								List<String> segments = segment(dash);
-								REMurl.addAll(segments);
-								for (String segment : segments) {
-									logger.trace("Emitting [{}]", segment);
-									_collector.emit(new Values(segment));
-								}
-							}
-						}
-					}
-				}
-			}
+			questions(sl);
 		}
 	}
 
-	List<String> segment(String text) {
+	private void questions(String sl) {
+		String[] questions = sl.split("\\?");
+		for (String qu : questions) {
+			dots(qu);
+		}
+	}
+
+	private void dots(String qu) {
+		String[] dots = qu.split("\\.");
+		for (String dot : dots) {
+			equals(dot);
+		}
+	}
+
+	private void equals(String dot) {
+		String[] equals = dot.split("=");
+		for (String eq : equals) {
+			underscores(eq);
+		}
+	}
+
+	private void underscores(String eq) {
+		String[] underscores = eq.split("_");
+		for (String un : underscores) {
+			dashes(un);
+		}
+	}
+
+	private void dashes(String un) {
+		String[] dashes = un.split("-");
+		for (String dash : dashes) {
+			List<String> segments = segment(dash);
+			REMurl.addAll(segments);
+			segments(segments);
+		}
+	}
+
+	private void segments(List<String> segments) {
+		for (String segment : segments) {
+			logger.trace("Emitting [{}]", segment);
+			collector.emit(new Values(segment), segment);
+		}
+	}
+
+	public List<String> segment(String text) {
 		if (StringUtils.isEmpty(text))
 			return Collections.emptyList();
-		if (_memomap.containsKey(text)) {
-			return _memomap.get(text);
+		if (memomap.containsKey(text)) {
+			return memomap.get(text);
 		} else {
 			List<String> result = findResult(text);
-			_memomap.put(text, result);
+			memomap.put(text, result);
 			return result;
 		}
 	}
 
-	List<String> findResult(String text) {
+	private List<String> findResult(String text) {
 		List<SplitResult> splitRes = splits(text);
 		List<List<String>> candidates = candidates(splitRes);
 		List<String> result =
@@ -171,7 +203,7 @@ public class URLSpout extends BaseRichSpout {
 		return result;
 	}
 
-	List<SplitResult> splits(String text) {
+	private List<SplitResult> splits(String text) {
 		List<SplitResult> res = new ArrayList<>();
 		int min = Math.min(text.length(), 20);
 		for (int i = 0; i < min; i++) {
@@ -183,7 +215,7 @@ public class URLSpout extends BaseRichSpout {
 		return res;
 	}
 
-	List<List<String>> candidates(List<SplitResult> splitRes) {
+	private List<List<String>> candidates(List<SplitResult> splitRes) {
 		List<List<String>> candidates = new ArrayList<>();
 		for (SplitResult splitResult : splitRes) {
 			List<String> list = new ArrayList<>();
@@ -194,13 +226,13 @@ public class URLSpout extends BaseRichSpout {
 		return candidates;
 	}
 
-	Double pwords(List<String> words) {
+	private Double pwords(List<String> words) {
 		return words.stream().map((w) -> pw(w)).reduce(1.0, (a,b) -> a * b);
 	}
 
-	double pw(String w) {
-		if (_lookup.containsKey(w)) {
-			return _lookup.get(w) / _itervalues;
+	private double pw(String w) {
+		if (lookup.containsKey(w)) {
+			return lookup.get(w) / itervalues;
 		}
 		return 10./(N * Math.pow(10, w.length()));
 	}
@@ -210,4 +242,15 @@ public class URLSpout extends BaseRichSpout {
 		declarer.declare(new Fields("word"));
 	}
 	
+    @Override
+    public void ack(Object msgId) {
+    	String msg = (String)msgId;
+    	logger.debug("Message [{}] succeeded", msg);
+    }
+
+    @Override
+    public void fail(Object msgId) {
+    	String msg = (String)msgId;
+    	logger.debug("Message [{}] failed", msg);
+    }
 }

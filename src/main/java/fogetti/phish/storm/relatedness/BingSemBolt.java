@@ -75,8 +75,8 @@ public class BingSemBolt extends BaseRichBolt {
 
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
 		try {
-			String keyword = input.getString(0);
-			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(keyword, "", "", startDate , endDate);
+			String url = input.getStringByField("url");
+			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(url, "", "", startDate , endDate);
 			collector.emit(input, new Values(calculateSearches(relatedKeywords)));
 			collector.ack(input);
 			logger.trace("Result [{}]", relatedKeywords);

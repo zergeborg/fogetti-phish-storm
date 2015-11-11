@@ -23,12 +23,12 @@ public class URLBoltTest {
 
 		String URL = "URL";
 		Tuple tuple = mock(Tuple.class);
-		when(tuple.getString(0)).thenReturn(URL);
+		when(tuple.getStringByField("word")).thenReturn(URL);
 		// When we call execute
 		urlbolt.execute(tuple);
 
 		// Then it forwards the input
-		verify(tuple, atLeast(1)).getString(0);
+		verify(tuple, atLeast(1)).getStringByField("word");
 		verify(spy, atLeast(1)).emit((Tuple)anyObject(), anyObject());
 		verify(spy, atLeast(1)).ack(anyObject());
 	}

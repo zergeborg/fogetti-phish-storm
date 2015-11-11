@@ -28,8 +28,8 @@ public class GoogleSemBolt extends BaseRichBolt {
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
 
-	private OutputCollector _collector;
-	private GoogleTrendsClient _client;
+	private OutputCollector collector;
+	private GoogleTrendsClient client;
 	private final String uname;
 	private final String pword;
 
@@ -41,13 +41,13 @@ public class GoogleSemBolt extends BaseRichBolt {
 	public GoogleSemBolt(GoogleTrendsClient client) {
 		this.uname = "";
 		this.pword = "";
-		this._client = client;
+		this.client = client;
 	}
 
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		_collector = collector;
-		_client = getClient();
+		this.collector = collector;
+		this.client = getClient();
 	}
 
 	GoogleTrendsClient getClient() {
@@ -58,12 +58,12 @@ public class GoogleSemBolt extends BaseRichBolt {
 
 	@Override
 	public void execute(Tuple input) {
-		String word = input.getString(0);
+		String url = input.getStringByField("url");
 		try {
-			GoogleTrendsRequest request = new GoogleTrendsRequest(word);
-			String csvresult = _client.execute(request);
-			_collector.emit(input, new Values(calculateSearches(csvresult)));
-			_collector.ack(input);
+			GoogleTrendsRequest request = new GoogleTrendsRequest(url);
+			String csvresult = client.execute(request);
+			collector.emit(input, new Values(calculateSearches(csvresult)));
+			collector.ack(input);
 			logger.trace("Result [{}]", csvresult);
 		} catch (GoogleTrendsClientException e) {
 			logger.error("Google Trend request failed", e);
