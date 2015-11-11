@@ -10,10 +10,15 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Tuple;
 
-public class IntersectionBolt extends BaseBasicBolt {
+public class IntersectionBolt extends BaseBasicBolt implements JedisCallback {
 
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
+	private final BloomFilter bloomfilter;
+	
+	public IntersectionBolt(BloomFilter bloomfilter) {
+		this.bloomfilter = bloomfilter;
+	}
 
 	@Override
 	public void execute(Tuple input, BasicOutputCollector collector) {
@@ -26,4 +31,8 @@ public class IntersectionBolt extends BaseBasicBolt {
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 	}
 
+	@Override
+	public void onMessage(String channel, String message) {
+		bloomfilter.run();
+	}
 }

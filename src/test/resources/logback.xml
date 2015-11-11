@@ -9,7 +9,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="fogetti.phish.storm" level="TRACE" additivity="false">
+	<logger name="fogetti.phish.storm" level="DEBUG" additivity="false">
 		<appender-ref ref="STDOUT" />
 	</logger>
 

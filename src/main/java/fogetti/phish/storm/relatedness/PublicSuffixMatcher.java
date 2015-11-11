@@ -5,11 +5,8 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
-import java.util.ListIterator;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -18,61 +15,6 @@ import org.slf4j.LoggerFactory;
 import fogetti.phish.storm.exception.URLMatchingFailedException;
 
 public class PublicSuffixMatcher {
-
-	private static class Rule {
-		public boolean exception = false;
-		public List<String> labels = new ArrayList<>();
-
-		public String match(Domain domain) {
-			int ruleSize = labels.size();
-			int domainSize = domain.labels.size();
-			if (domainSize < ruleSize) return "";
-			Stack<String> ps = new Stack<>();
-			identical(ps, labels.listIterator(ruleSize), domain.labels.listIterator(domainSize));
-			return result(ps);
-		}
-
-		void identical(Stack<String> ps, ListIterator<String> rulesIterator, ListIterator<String> domainsIterator) {
-			boolean identical = false;
-			do {
-				identical = checkIdentical(identical, ps, rulesIterator.previous(), domainsIterator.previous());
-			} while (
-				previousValid(identical, rulesIterator, domainsIterator)
-			);
-		}
-
-		private boolean checkIdentical(boolean identical, Stack<String> ps, String prevRuleLabel,
-				String prevDomainLabel) {
-			if (prevRuleLabel.equals(prevDomainLabel))
-				identical = true;
-			if (prevRuleLabel.equals("*"))
-				identical = true;
-			if (identical)
-				ps.push(prevDomainLabel);
-			return identical;
-		}
-		
-		boolean previousValid(boolean identical, ListIterator<String> rulesIterator,
-				ListIterator<String> domainsIterator) {
-			return identical
-					&& rulesIterator.hasPrevious()
-					&& domainsIterator.hasPrevious();
-		}
-
-		String result(Stack<String> ps) {
-			return StringUtils.substringBeforeLast(
-					ps.stream().reduce("", (a,b) -> b + "." + a), ".");
-		}
-
-		@Override
-		public String toString() {
-			return "Rule [labels=" + labels + "]";
-		}
-	}
-
-	private static class Domain {
-		public List<String> labels = new ArrayList<>();
-	}
 
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 	
@@ -112,18 +54,6 @@ public class PublicSuffixMatcher {
 		}
 	}
 
-	private static class Find {
-		public List<Rule> matches;
-		public Rule exception;
-		public Rule max;
-
-		public Find(List<Rule> matches, Rule exception, Rule max) {
-			this.matches = matches;
-			this.exception = exception;
-			this.max = max;
-		}
-	}
-
 	public String findPublicSuffix(String mld) {
 		if (loaded) {
 			Domain domain = new Domain();
@@ -137,7 +67,7 @@ public class PublicSuffixMatcher {
 		}
 	}
 
-	void findMatches(Find find, Domain domain) {
+	public void findMatches(Find find, Domain domain) {
 		for (Rule rule : rules) {
 			if (!StringUtils.isEmpty(rule.match(domain))) {
 				find.matches.add(rule);
@@ -148,7 +78,7 @@ public class PublicSuffixMatcher {
 		}
 	}
 
-	Rule findPrevailing(Find find) {
+	public Rule findPrevailing(Find find) {
 		Rule prevailing = null;
 		if (find.matches.isEmpty()) {
 			Rule asterisk = new Rule();

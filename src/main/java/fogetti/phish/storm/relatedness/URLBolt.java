@@ -17,19 +17,19 @@ public class URLBolt extends BaseRichBolt {
 
 	private static final long serialVersionUID = 7435926978740146015L;
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
-	OutputCollector _collector;
+	private OutputCollector collector;
 
 	@Override
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		_collector = collector;
+		this.collector = collector;
 	}
 
 	@Override
 	public void execute(Tuple tuple) {
-		String word = tuple.getString(0);
+		String word = tuple.getStringByField("word");
 		logger.trace("Received [{}]", word);
-		_collector.emit(tuple, new Values(word));
-		_collector.ack(tuple);
+		collector.emit(tuple, new Values(word));
+		collector.ack(tuple);
 	}
 
 	@Override

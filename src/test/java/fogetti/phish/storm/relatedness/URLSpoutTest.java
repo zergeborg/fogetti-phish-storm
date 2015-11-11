@@ -2,6 +2,7 @@ package fogetti.phish.storm.relatedness;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyObject;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -58,7 +59,7 @@ public class URLSpoutTest {
 
 		// Then it calculates the public suffix of the given URL
 		// and segments the words found in the URL
-		verify(spy, atLeast(1)).emit(anyObject());
+		verify(spy, atLeast(1)).emit(anyObject(), anyString());
 	}
 
 	protected SpoutOutputCollector getSpy() {

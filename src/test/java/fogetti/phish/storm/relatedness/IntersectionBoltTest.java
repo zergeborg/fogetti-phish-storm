@@ -16,7 +16,7 @@ public class IntersectionBoltTest {
 		// Given we want to create an IntersectionBolt
 
 		// When we call the constructor
-		IntersectionBolt iBolt = new IntersectionBolt();
+		IntersectionBolt iBolt = new IntersectionBolt(null);
 
 		// Then it succeeds
 	}
@@ -24,7 +24,7 @@ public class IntersectionBoltTest {
 	@Test
 	public void receivesEmptySet() throws Exception {
 		// Given we want to compute intersections
-		IntersectionBolt iBolt = new IntersectionBolt();
+		IntersectionBolt iBolt = new IntersectionBolt(null);
 
 		Tuple input = mock(Tuple.class);
 		BasicOutputCollector collector = mock(BasicOutputCollector.class);
