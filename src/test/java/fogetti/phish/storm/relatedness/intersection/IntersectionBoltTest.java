@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.intersection;
 
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -8,6 +8,7 @@ import org.junit.Test;
 
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.tuple.Tuple;
+import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 
 public class IntersectionBoltTest {
 

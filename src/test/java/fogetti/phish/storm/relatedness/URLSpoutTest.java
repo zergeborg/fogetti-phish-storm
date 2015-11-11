@@ -20,7 +20,7 @@ public class URLSpoutTest {
 	@Test
 	public void segmentOne() throws Exception {
 		// Given we want to segment a word before calculating relatedness
-		URLSpout spout = new URLSpout();
+		URLSpout spout = new URLSpout(null);
 		spout.open(null, null, null);
 
 		// When we submit "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
@@ -35,7 +35,7 @@ public class URLSpoutTest {
 	@Test
 	public void segmentTwo() throws Exception {
 		// Given we want to segment a word before calculating relatedness
-		URLSpout spout = new URLSpout();
+		URLSpout spout = new URLSpout(null);
 		spout.open(null, null, null);
 
 		// When we submit "inaholeinthegroundtherelivedahobbitnotanastydirtywetholefilledwiththeendsofwormsandanoozysmellnoryetadrybaresandyholewithnothinginittositdownonortoeatitwasahobbitholeandthatmeanscomfort"
@@ -50,7 +50,7 @@ public class URLSpoutTest {
 	@Test
 	public void nextTuple() throws Exception {
 		// Given we want to measure relatedness in an URL
-		URLSpout spout = new URLSpout();
+		URLSpout spout = new URLSpout(null);
 		SpoutOutputCollector spy = getSpy();
 		spout.open(null, null, spy);
 

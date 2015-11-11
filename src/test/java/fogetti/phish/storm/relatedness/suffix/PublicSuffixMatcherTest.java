@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.suffix;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -9,6 +9,7 @@ import java.io.File;
 import org.junit.Test;
 
 import fogetti.phish.storm.exception.URLMatchingFailedException;
+import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 
 public class PublicSuffixMatcherTest {
 

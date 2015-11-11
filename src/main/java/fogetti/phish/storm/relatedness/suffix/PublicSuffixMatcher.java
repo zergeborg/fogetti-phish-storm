@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.suffix;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.exception.URLMatchingFailedException;
+import fogetti.phish.storm.relatedness.URLSpout;
 
 public class PublicSuffixMatcher {
 

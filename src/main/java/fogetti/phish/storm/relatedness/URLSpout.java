@@ -23,6 +23,8 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
+import fogetti.phish.storm.db.Persistency;
+import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 
 /**
  * Implementation of the following real time phishing classifier:
@@ -54,6 +56,11 @@ public class URLSpout extends BaseRichSpout {
 	private Set<String> REMurl = new HashSet<>();
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
 	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
+	private final Persistency db;
+
+	public URLSpout(Persistency db) {
+		this.db = db;
+	}
 
 	@Override
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
@@ -245,6 +252,7 @@ public class URLSpout extends BaseRichSpout {
     @Override
     public void ack(Object msgId) {
     	String msg = (String)msgId;
+    	db.publish("phish", msg);
     	logger.debug("Message [{}] succeeded", msg);
     }
 

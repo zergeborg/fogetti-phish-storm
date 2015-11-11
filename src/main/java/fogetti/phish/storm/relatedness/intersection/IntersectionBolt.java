@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.intersection;
 
 import java.util.Set;
 
@@ -9,6 +9,7 @@ import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Tuple;
+import fogetti.phish.storm.db.JedisCallback;
 
 public class IntersectionBolt extends BaseBasicBolt implements JedisCallback {
 
