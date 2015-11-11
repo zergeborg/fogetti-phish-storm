@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.intersection;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -33,5 +33,12 @@ public class IntersectionResult {
 		boolean eq = true;
 		eq &= (other.msgId == null) ? msgId == null : other.msgId.equals(msgId);
 		return eq;
+	}
+	
+	@Override
+	public int hashCode() {
+		int result = 17;
+		result = 31 * result + msgId.hashCode();
+		return result;
 	}
 }

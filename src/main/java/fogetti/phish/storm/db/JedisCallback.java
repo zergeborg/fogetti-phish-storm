@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.db;
 
 public interface JedisCallback {
 

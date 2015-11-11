@@ -5,11 +5,12 @@ import java.util.Scanner;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
+import fogetti.phish.storm.db.Persistency;
 import fogetti.phish.storm.relatedness.BingSemBolt;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
-import fogetti.phish.storm.relatedness.IntersectionBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
+import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 
 public class PhishTopologyBuilder {
 
@@ -20,7 +21,7 @@ public class PhishTopologyBuilder {
 		String uname = uname(console);
 		String pword = pword(console);
 		console.close();
-		builder.setSpout("urlsource", new URLSpout(), 1);
+		builder.setSpout("urlsource", new URLSpout(db()), 1);
 		builder.setBolt("urlsplit", new URLBolt(), 7)
 			.fieldsGrouping("urlsource", new Fields("word"));
 		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword), 7)
@@ -32,6 +33,10 @@ public class PhishTopologyBuilder {
 			.globalGrouping("bingrelatedkeywords");
 		StormTopology topology = builder.createTopology();
 		return topology;
+	}
+
+	private static Persistency db() {
+		return null;
 	}
 
 	private static String uname(Scanner console) {

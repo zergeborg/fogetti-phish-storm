@@ -1,4 +1,4 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.suffix;
 
 import java.util.List;
 

@@ -1,8 +1,10 @@
-package fogetti.phish.storm.relatedness;
+package fogetti.phish.storm.relatedness.intersection;
 
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+
+import fogetti.phish.storm.relatedness.intersection.IntersectionResult;
 
 public class IntersectionResultTest {
 
@@ -57,5 +59,18 @@ public class IntersectionResultTest {
 
 		// Then
 		assertEquals("The two intersection results were not equal", result1, result2);
+	}
+
+	@Test
+	public void equalInstanceEqualHashcode() throws Exception {
+		// Given
+		IntersectionResult result1 = new IntersectionResult("testId");
+		IntersectionResult result2 = new IntersectionResult("testId");
+
+		// When
+		assertEquals("The two intersection results were not equal", result1, result2);
+
+		// Then
+		assertEquals("The two intersection results have different hashcodes", result1.hashCode(), result2.hashCode());
 	}
 }
