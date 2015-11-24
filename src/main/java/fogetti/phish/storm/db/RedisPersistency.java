@@ -14,6 +14,8 @@ import redis.clients.jedis.JedisPoolConfig;
 
 public class RedisPersistency implements Persistency, Runnable {
 
+	private static final long serialVersionUID = 3896918057489260695L;
+
 	private static final Logger logger = LoggerFactory.getLogger(RedisPersistency.class);
 	
 	private final JedisPool jedispool;

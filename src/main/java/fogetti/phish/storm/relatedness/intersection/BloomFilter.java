@@ -1,6 +1,8 @@
 package fogetti.phish.storm.relatedness.intersection;
 
-public interface BloomFilter {
+import java.io.Serializable;
+
+public interface BloomFilter extends Serializable {
 
 	void run();
 }

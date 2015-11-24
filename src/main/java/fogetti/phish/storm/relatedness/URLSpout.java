@@ -24,6 +24,7 @@ import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import fogetti.phish.storm.db.Persistency;
+import fogetti.phish.storm.db.RedisPersistency;
 import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 
 /**
@@ -56,7 +57,10 @@ public class URLSpout extends BaseRichSpout {
 	private Set<String> REMurl = new HashSet<>();
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
 	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
-	private final Persistency db;
+	private transient Persistency db;
+
+	public URLSpout() {
+	}
 
 	public URLSpout(Persistency db) {
 		this.db = db;
@@ -65,10 +69,17 @@ public class URLSpout extends BaseRichSpout {
 	@Override
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
+		this.db = db();
 		this.urllist = readURLListFromFile();
 		this.matcher = readPublicSuffixListFromFile();
 		this.lookup = readCountFromFile();
 		this.iterator = urllist.iterator();
+	}
+
+	private Persistency db() {
+		RedisPersistency db = new RedisPersistency(6379, 2000);
+		new Thread(db, "publisherThread").start();
+		return db;
 	}
 
 	private List<String> readURLListFromFile() {

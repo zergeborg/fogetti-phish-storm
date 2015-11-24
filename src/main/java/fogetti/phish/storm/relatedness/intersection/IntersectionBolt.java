@@ -16,7 +16,7 @@ public class IntersectionBolt extends BaseBasicBolt implements JedisCallback {
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private final BloomFilter bloomfilter;
-	
+
 	public IntersectionBolt(BloomFilter bloomfilter) {
 		this.bloomfilter = bloomfilter;
 	}
@@ -34,6 +34,7 @@ public class IntersectionBolt extends BaseBasicBolt implements JedisCallback {
 
 	@Override
 	public void onMessage(String channel, String message) {
+		logger.info("Message [{}] intersected", message);
 		bloomfilter.run();
 	}
 }

@@ -14,7 +14,7 @@ import redis.clients.jedis.JedisPubSub;
 public class JedisListener extends JedisPubSub implements Runnable {
 
 	private static final Logger logger = LoggerFactory.getLogger(JedisListener.class);
-	
+
 	private final JedisCallback callback;
 	private final JedisPool jedispool;
 	private final String channel;
@@ -34,12 +34,10 @@ public class JedisListener extends JedisPubSub implements Runnable {
 	public void run() {
 		while (!Thread.currentThread().isInterrupted()) {
 			try (Jedis jedis = jedispool.getResource()) {
-				logger.info("subscribing");
+				logger.info("Subscribing");
 				jedis.subscribe(this, channel);
-				logger.info("subscribe returned, closing down");
-				jedis.quit();
 			} catch (Exception e) {
-				logger.info(">>> OH NOES Sub - " + e.getMessage());
+				logger.error("Subscribing to Redis failed - {}", e.getMessage());
 			}
 		}
 	}

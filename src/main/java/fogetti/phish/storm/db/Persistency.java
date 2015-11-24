@@ -1,6 +1,8 @@
 package fogetti.phish.storm.db;
 
-public interface Persistency {
+import java.io.Serializable;
+
+public interface Persistency extends Serializable {
 
 	void publish(String channel, String msg);
 }
