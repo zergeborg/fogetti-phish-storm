@@ -62,7 +62,7 @@ public class GoogleSemBolt extends BaseRichBolt {
 		try {
 			GoogleTrendsRequest request = new GoogleTrendsRequest(url);
 			String csvresult = client.execute(request);
-			collector.emit(input, new Values(calculateSearches(csvresult)));
+			collector.emit(input, new Values(calculateSearches(csvresult), url));
 			collector.ack(input);
 			logger.trace("Result [{}]", csvresult);
 		} catch (GoogleTrendsClientException e) {
@@ -91,17 +91,14 @@ public class GoogleSemBolt extends BaseRichBolt {
 		}
 		String[] lines = searches.split("\\r?\\n");
 		for (String line : lines) {
-			String terms = line.split(",")[0];
-			for (String term : terms.split("\\s")) {
-				result.add(term);
-			}
+			result.add(line.split(",")[0]);
 		}
 		return result;
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("googletrends"));
+		declarer.declare(new Fields("googletrends", "url"));
 	}
 
 }

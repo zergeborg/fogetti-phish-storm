@@ -38,11 +38,6 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 		
 	}
 	
-	@Override
-	protected String section() {
-		return "Top searches";
-	}
-
 	@Test
 	public void canCreate() throws Exception {
 		// Given we want to query Google Related data
@@ -71,7 +66,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 	}
 	
 	@Test
-	public void topSearches() throws Exception {
+	public void topAndRisingSearches() throws Exception {
 		// Given we want to query Google Related data
 		GoogleTrendsClient client = mock(GoogleTrendsClient.class);
 		GoogleSemBolt bolt = new SpyingGoogleSemBolt(client);
@@ -81,7 +76,8 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 
 		// When the bolt receives a new tuple
 		Tuple input = mock(Tuple.class);
-		when(input.getStringByField("url")).thenReturn("paypal");
+		String paypal = "paypal";
+		when(input.getStringByField("url")).thenReturn(paypal);
 		when(client.execute(anyObject())).thenReturn(readSearchResult());
 		bolt.execute(input);
 
@@ -89,7 +85,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 		verify(input, atLeast(1)).getStringByField("url");
 		verify(client, atLeast(1)).execute(anyObject());
 		HashSet<String> tops = readSearchesFromFile();
-		Values topSearches = new Values(tops);
+		Values topSearches = new Values(tops, paypal);
 		verify(spy, atLeast(1)).emit(input, topSearches);
 		verify(spy, atLeast(1)).ack(input);
 	}

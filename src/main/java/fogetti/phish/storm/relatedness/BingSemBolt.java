@@ -77,7 +77,7 @@ public class BingSemBolt extends BaseRichBolt {
 		try {
 			String url = input.getStringByField("url");
 			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(url, "", "", startDate , endDate);
-			collector.emit(input, new Values(calculateSearches(relatedKeywords)));
+			collector.emit(input, new Values(calculateSearches(relatedKeywords), url));
 			collector.ack(input);
 			logger.trace("Result [{}]", relatedKeywords);
 		} catch (IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage e) {
@@ -96,7 +96,7 @@ public class BingSemBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("bingrelatedkeywords"));
+		declarer.declare(new Fields("bingrelatedkeywords", "url"));
 	}
 
 }

@@ -32,7 +32,7 @@ public class PhishTopologyRunner {
 	private static void runSimply(StormTopology topology, Config conf) {
 		LocalCluster cluster = new LocalCluster();
 		cluster.submitTopology("test", conf, topology);
-		Utils.sleep(10000);
+		Utils.sleep(30000);
 		cluster.killTopology("test");
 		cluster.shutdown();
 	}

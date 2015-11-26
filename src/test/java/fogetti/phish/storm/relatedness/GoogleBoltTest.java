@@ -9,21 +9,21 @@ import java.util.HashSet;
 import org.apache.storm.commons.io.FileUtils;
 import org.freaknet.gtrends.api.GoogleTrendsCsvParser;
 
-public abstract class GoogleBoltTest {
+public class GoogleBoltTest {
 	
-	protected abstract String section();
-
 	protected HashSet<String> readSearchesFromFile() throws Exception {
 		String searchresult = readSearchResult();
 		HashSet<String> result = new HashSet<>();
 		GoogleTrendsCsvParser parser = new GoogleTrendsCsvParser(searchresult);
-		String searches = parser.getSectionAsString(section(), false);
+		String searches = parser.getSectionAsString("Top searches", false);
 		String[] lines = searches.split("\\r?\\n");
 		for (String line : lines) {
-			String terms = line.split(",")[0];
-			for (String term : terms.split("\\s")) {
-				result.add(term);
-			}
+			result.add(line.split(",")[0]);
+		}
+		searches = parser.getSectionAsString("Rising searches", false);
+		lines = searches.split("\\r?\\n");
+		for (String line : lines) {
+			result.add(line.split(",")[0]);
 		}
 		return result;
 	}
