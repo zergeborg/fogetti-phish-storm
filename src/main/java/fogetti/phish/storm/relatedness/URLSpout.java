@@ -17,6 +17,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
@@ -53,6 +56,7 @@ public class URLSpout extends BaseRichSpout {
 	private PublicSuffixMatcher matcher;
 	private Map<String, List<String>> memomap = new HashMap<>();
 	private Map<String, Long> lookup = new HashMap<>();
+	private AckResult ackresult = new AckResult();
 	private Set<String> RDurl = new HashSet<>();
 	private Set<String> REMurl = new HashSet<>();
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
@@ -83,7 +87,7 @@ public class URLSpout extends BaseRichSpout {
 	}
 
 	private List<String> readURLListFromFile() {
-		return Arrays.asList("http://sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run");
+		return Arrays.asList("http://sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run","https://www.smbctb.co.jp/JPGCB/JPS/portal/SignonLocaleSwitch.do?locale=en_JP");
 	}
 
 	private PublicSuffixMatcher readPublicSuffixListFromFile() {
@@ -262,11 +266,31 @@ public class URLSpout extends BaseRichSpout {
 	
     @Override
     public void ack(Object msgId) {
-    	String msg = (String)msgId;
-    	db.publish("phish", msg);
-    	logger.debug("Message [{}] succeeded", msg);
+    	ack(msgId, ackresult, RDurl, REMurl);
     }
 
+    public void ack(Object msgId, AckResult ackresult, Set<String> RDurl, Set<String> REMurl) {
+    	try {
+    		String m = (String)msgId;
+    		if (RDurl.contains(m)) {
+    			ackresult.RDurl.add(m);
+    		} else if (REMurl.contains(m)) {
+    			ackresult.REMurl.add(m);
+    		} else {
+    			return;
+    		}
+    		if (ackresult.RDurl.size() == RDurl.size()
+    			&& ackresult.REMurl.size() == REMurl.size()) {
+    			ObjectMapper mapper = new ObjectMapper();
+    			String msg = mapper.writeValueAsString(ackresult);
+    			db.publish("phish", msg);
+    			logger.debug("Message [{}] succeeded", msg);
+    		}
+		} catch (JsonProcessingException e) {
+			logger.error("Could not send acknowledgment to the intersection bolt", e);
+		}
+    }
+    
     @Override
     public void fail(Object msgId) {
     	String msg = (String)msgId;
