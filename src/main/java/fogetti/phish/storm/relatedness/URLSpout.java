@@ -6,12 +6,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -56,9 +54,7 @@ public class URLSpout extends BaseRichSpout {
 	private PublicSuffixMatcher matcher;
 	private Map<String, List<String>> memomap = new HashMap<>();
 	private Map<String, Long> lookup = new HashMap<>();
-	private AckResult ackresult = new AckResult();
-	private Set<String> RDurl = new HashSet<>();
-	private Set<String> REMurl = new HashSet<>();
+	private Map<String, AckResult> ackIndex = new HashMap<>();
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
 	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
 	private transient Persistency db;
@@ -71,6 +67,7 @@ public class URLSpout extends BaseRichSpout {
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
 		this.db = db();
@@ -130,77 +127,80 @@ public class URLSpout extends BaseRichSpout {
 			String URLWithScheme = iterator.next();
 			logger.debug("Calculating relatedness for [{}]", URLWithScheme);
 			String URL = URLWithScheme.split("//")[1];
-			calculateRDurl(URL);
-			calculateREMurl(URL);
+			AckResult ackRes = new AckResult();
+			ackRes.URL = URL;
+			ackIndex.put(URL, ackRes);
+			calculateRDurl(URL, ackRes);
+			calculateREMurl(URL, ackRes);
 		}
 	}
 
-	void calculateRDurl(String URL) {
+	void calculateRDurl(String URL, AckResult ackRes) {
 		String mld = URL.split("/")[0];
 		String ps = matcher.findPublicSuffix(mld);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
-		RDurl.add(mld);
+		ackRes.pushRD(mld);
 		logger.trace("Emitting [{}]", mld);
-		collector.emit(new Values(mld), mld);
+		collector.emit(new Values(mld, URL), mld+"~"+URL);
 		String mldNoPs = StringUtils.substringBeforeLast(mld, "." + ps);
-		RDurl.add(mldNoPs);
+		ackRes.pushRD(mldNoPs);
 		logger.trace("Emitting [{}]", mldNoPs);
-		collector.emit(new Values(mldNoPs), mldNoPs);
+		collector.emit(new Values(mldNoPs, URL), mldNoPs+"~"+URL);
 	}
 
-	void calculateREMurl(String URL) {
+	void calculateREMurl(String URL, AckResult ackRes) {
 		String rem = StringUtils.substringAfter(URL, "/");
-		slashes(rem);
+		slashes(rem, URL, ackRes);
 	}
 
-	private void slashes(String rem) {
+	private void slashes(String rem, String URL, AckResult ackRes) {
 		String[] slash = rem.split("/");
 		for (String sl : slash) {
-			questions(sl);
+			questions(sl, URL, ackRes);
 		}
 	}
 
-	private void questions(String sl) {
+	private void questions(String sl, String URL, AckResult ackRes) {
 		String[] questions = sl.split("\\?");
 		for (String qu : questions) {
-			dots(qu);
+			dots(qu, URL, ackRes);
 		}
 	}
 
-	private void dots(String qu) {
+	private void dots(String qu, String URL, AckResult ackRes) {
 		String[] dots = qu.split("\\.");
 		for (String dot : dots) {
-			equals(dot);
+			equals(dot, URL, ackRes);
 		}
 	}
 
-	private void equals(String dot) {
+	private void equals(String dot, String URL, AckResult ackRes) {
 		String[] equals = dot.split("=");
 		for (String eq : equals) {
-			underscores(eq);
+			underscores(eq, URL, ackRes);
 		}
 	}
 
-	private void underscores(String eq) {
+	private void underscores(String eq, String URL, AckResult ackRes) {
 		String[] underscores = eq.split("_");
 		for (String un : underscores) {
-			dashes(un);
+			dashes(un, URL, ackRes);
 		}
 	}
 
-	private void dashes(String un) {
+	private void dashes(String un, String URL, AckResult ackRes) {
 		String[] dashes = un.split("-");
 		for (String dash : dashes) {
 			List<String> segments = segment(dash);
-			REMurl.addAll(segments);
-			segments(segments);
+			ackRes.pushAllREM(segments);
+			segments(segments, URL);
 		}
 	}
 
-	private void segments(List<String> segments) {
+	private void segments(List<String> segments, String URL) {
 		for (String segment : segments) {
 			logger.trace("Emitting [{}]", segment);
-			collector.emit(new Values(segment), segment);
+			collector.emit(new Values(segment, URL), segment+"~"+URL);
 		}
 	}
 
@@ -261,30 +261,36 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("word"));
+		declarer.declare(new Fields("word", "url"));
 	}
 	
     @Override
     public void ack(Object msgId) {
-    	ack(msgId, ackresult, RDurl, REMurl);
+		String m = (String)msgId;
+		String[] split = m.split("~");
+		String suffix = split[1];
+		ack(suffix);
     }
 
-    public void ack(Object msgId, AckResult ackresult, Set<String> RDurl, Set<String> REMurl) {
+    public void ack(String suffix) {
     	try {
-    		String m = (String)msgId;
-    		if (RDurl.contains(m)) {
-    			ackresult.RDurl.add(m);
-    		} else if (REMurl.contains(m)) {
-    			ackresult.REMurl.add(m);
-    		} else {
-    			return;
+        	AckResult result = ackIndex.get(suffix);
+        	if (result == null) {
+        		return;
+        	}
+    		if (!result.RDempty()) {
+    			String rd = result.popRD();
+    			result.addRD(rd);
     		}
-    		if (ackresult.RDurl.size() == RDurl.size()
-    			&& ackresult.REMurl.size() == REMurl.size()) {
+    		if (!result.REMempty()) {
+    			String rem = result.popREM();
+    			result.addREM(rem);
+    		}
+    		if (result.RDempty() && result.REMempty()) {
     			ObjectMapper mapper = new ObjectMapper();
-    			String msg = mapper.writeValueAsString(ackresult);
+    			String msg = mapper.writeValueAsString(result);
     			db.publish("phish", msg);
-    			logger.debug("Message [{}] succeeded", msg);
+    			ackIndex.remove(suffix);
     		}
 		} catch (JsonProcessingException e) {
 			logger.error("Could not send acknowledgment to the intersection bolt", e);

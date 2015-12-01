@@ -63,6 +63,7 @@ public class BingSemBoltTest {
 		endDate = factory.newXMLGregorianCalendar(end);
 	}
 
+	@SuppressWarnings("unchecked")
 	private Keyword mockKeyword1() {
 		Keyword keyword1 = new Keyword();
 		JAXBElement<String> paypalRelated1 = mock(JAXBElement.class);
@@ -71,6 +72,7 @@ public class BingSemBoltTest {
 		return keyword1;
 	}
 
+	@SuppressWarnings("unchecked")
 	private Keyword mockKeyword2() {
 		Keyword keyword2 = new Keyword();
 		JAXBElement<String> paypalRelated2 = mock(JAXBElement.class);
@@ -89,7 +91,7 @@ public class BingSemBoltTest {
 	public void requestFails() throws Exception {
 		// Given we want to get related words for a keyword
 		Tuple keyword = mock(Tuple.class);
-		when(keyword.getStringByField("url")).thenReturn(paypal);
+		when(keyword.getStringByField("segment")).thenReturn(paypal);
 
 		// When we send a request
 		when(api.getRelatedKeywords(paypal, country, language, startDate , endDate))
@@ -105,7 +107,7 @@ public class BingSemBoltTest {
 	public void requestSucceeds() throws Exception {
 		// Given we want to get related words for a keyword
 		Tuple keyword = mock(Tuple.class);
-		when(keyword.getStringByField("url")).thenReturn(paypal);
+		when(keyword.getStringByField("segment")).thenReturn(paypal);
 
 		// When we send a request
 		when(api.getRelatedKeywords(paypal, country, language, startDate , endDate)).thenReturn(keywordArray);

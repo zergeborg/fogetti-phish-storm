@@ -43,11 +43,13 @@ public class BingSemBolt extends BaseRichBolt {
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 		this.api = getApi();
 	}
 
+	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector, IWebmasterApi api) {
 		this.collector = collector;
 		this.api = api;
@@ -63,7 +65,7 @@ public class BingSemBolt extends BaseRichBolt {
 		try {
 			DatatypeFactory factory = DatatypeFactory.newInstance();
 			GregorianCalendar start = new GregorianCalendar();
-			start.set(Calendar.DAY_OF_YEAR, -60);
+			start.set(Calendar.DAY_OF_YEAR, -180);
 			XMLGregorianCalendar startDate = factory.newXMLGregorianCalendar(start);
 			GregorianCalendar end = new GregorianCalendar();
 			XMLGregorianCalendar endDate = factory.newXMLGregorianCalendar(end);
@@ -75,9 +77,10 @@ public class BingSemBolt extends BaseRichBolt {
 
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
 		try {
+			String segment = input.getStringByField("segment");
 			String url = input.getStringByField("url");
-			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(url, "", "", startDate , endDate);
-			collector.emit(input, new Values(calculateSearches(relatedKeywords), url));
+			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(segment, "", "", startDate , endDate);
+			collector.emit(input, new Values(calculateSearches(relatedKeywords), segment, url));
 			collector.ack(input);
 			logger.trace("Result [{}]", relatedKeywords);
 		} catch (IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage e) {
@@ -96,7 +99,7 @@ public class BingSemBolt extends BaseRichBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("bingrelatedkeywords", "url"));
+		declarer.declare(new Fields("bingrelatedkeywords", "segment", "url"));
 	}
 
 }

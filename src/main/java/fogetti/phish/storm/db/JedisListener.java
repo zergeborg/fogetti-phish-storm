@@ -38,6 +38,7 @@ public class JedisListener extends JedisPubSub implements Runnable {
 				jedis.subscribe(this, channel);
 			} catch (Exception e) {
 				logger.error("Subscribing to Redis failed - {}", e.getMessage());
+				Thread.currentThread().interrupt();
 			}
 		}
 	}

@@ -14,7 +14,6 @@ public class PhishTopologyRunner {
 	public static void run(String[] args, StormTopology topology)
 			throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
 		Config conf = new Config();
-		conf.setDebug(true);
 		if (args != null && args.length > 0) {
 			runWithProgressbar(args, topology, conf);
 		}

@@ -20,21 +20,23 @@ public class URLBolt extends BaseRichBolt {
 	private OutputCollector collector;
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		this.collector = collector;
 	}
 
 	@Override
 	public void execute(Tuple tuple) {
-		String word = tuple.getStringByField("word");
-		logger.trace("Received [{}]", word);
-		collector.emit(tuple, new Values(word));
+		String segment = tuple.getStringByField("word");
+		String url = tuple.getStringByField("url");
+		logger.trace("Received [{}]", segment);
+		collector.emit(tuple, new Values(segment, url));
 		collector.ack(tuple);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("url"));
+		declarer.declare(new Fields("segment", "url"));
 	}
 
 }

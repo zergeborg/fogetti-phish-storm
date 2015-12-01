@@ -41,13 +41,13 @@ public class RedisPersistency implements Persistency, Runnable {
 		while (!Thread.currentThread().isInterrupted()) {
 			try (Jedis jedis = jedispool.getResource()) {
 				PublishMessage message = publishq.take();
-				logger.info("publishing");
+				logger.info("Publishing [Message={}]", message.msg);
 				jedis.publish(message.channel, message.msg);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 				logger.info("Iterruption signal captured - Exiting Redis persistency");
 			} catch (Exception e) {
-				logger.info(">>> OH NOES Pub, " + e.getMessage());
+				logger.error("Publishing to Redis failed", e);
 			}
 		}
 	}
