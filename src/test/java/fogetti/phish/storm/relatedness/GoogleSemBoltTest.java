@@ -77,15 +77,18 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 		// When the bolt receives a new tuple
 		Tuple input = mock(Tuple.class);
 		String paypal = "paypal";
-		when(input.getStringByField("url")).thenReturn(paypal);
+		when(input.getStringByField("segment")).thenReturn(paypal);
+		String url = "url";
+		when(input.getStringByField("url")).thenReturn(url);
 		when(client.execute(anyObject())).thenReturn(readSearchResult());
 		bolt.execute(input);
 
 		// Then it sends top searches to the intersection bolt
+		verify(input, atLeast(1)).getStringByField("segment");
 		verify(input, atLeast(1)).getStringByField("url");
 		verify(client, atLeast(1)).execute(anyObject());
 		HashSet<String> tops = readSearchesFromFile();
-		Values topSearches = new Values(tops, paypal);
+		Values topSearches = new Values(tops, paypal, url);
 		verify(spy, atLeast(1)).emit(input, topSearches);
 		verify(spy, atLeast(1)).ack(input);
 	}
@@ -106,7 +109,8 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 
 		// When the bolt receives a new tuple
 		Tuple input = mock(Tuple.class);
-		when(input.getString(0)).thenReturn("paypal");
+		when(input.getStringByField("segment")).thenReturn("paypal");
+		when(input.getStringByField("url")).thenReturn("http://google.com");
 		bolt.execute(input);
 
 		// Then it sends a new query to Google
