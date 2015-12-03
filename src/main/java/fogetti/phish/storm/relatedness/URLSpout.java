@@ -132,20 +132,23 @@ public class URLSpout extends BaseRichSpout {
 			ackIndex.put(URL, ackRes);
 			calculateRDurl(URL, ackRes);
 			calculateREMurl(URL, ackRes);
+			ackRes.setAllsent(true);
 		}
 	}
 
 	void calculateRDurl(String URL, AckResult ackRes) {
-		String mld = URL.split("/")[0];
-		String ps = matcher.findPublicSuffix(mld);
+		String mldps = URL.split("/")[0];
+		ackRes.MLDPS = mldps;
+		String ps = matcher.findPublicSuffix(mldps);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
+		ackRes.pushRD(mldps);
+		logger.debug("Emitting [{}]", "mldps"+mldps);
+		collector.emit(new Values(mldps, URL), "mldps"+mldps+"~"+URL);
+		String mld = StringUtils.substringBeforeLast(mldps, "." + ps);
+		ackRes.MLD = mld;
 		ackRes.pushRD(mld);
-		logger.trace("Emitting [{}]", mld);
-		collector.emit(new Values(mld, URL), mld+"~"+URL);
-		String mldNoPs = StringUtils.substringBeforeLast(mld, "." + ps);
-		ackRes.pushRD(mldNoPs);
-		logger.trace("Emitting [{}]", mldNoPs);
-		collector.emit(new Values(mldNoPs, URL), mldNoPs+"~"+URL);
+		logger.debug("Emitting [{}]", "mld"+mld);
+		collector.emit(new Values(mld, URL), "mld"+mld+"~"+URL);
 	}
 
 	void calculateREMurl(String URL, AckResult ackRes) {
@@ -192,14 +195,14 @@ public class URLSpout extends BaseRichSpout {
 		String[] dashes = un.split("-");
 		for (String dash : dashes) {
 			List<String> segments = segment(dash);
-			ackRes.pushAllREM(segments);
-			segments(segments, URL);
+			segments(segments, URL, ackRes);
 		}
 	}
 
-	private void segments(List<String> segments, String URL) {
+	private void segments(List<String> segments, String URL, AckResult ackRes) {
 		for (String segment : segments) {
-			logger.trace("Emitting [{}]", segment);
+			ackRes.pushREM(segment);
+			logger.debug("Emitting [{}]", segment);
 			collector.emit(new Values(segment, URL), segment+"~"+URL);
 		}
 	}
@@ -275,23 +278,17 @@ public class URLSpout extends BaseRichSpout {
     public void ack(String suffix) {
     	try {
         	AckResult result = ackIndex.get(suffix);
-        	if (result == null) {
-        		return;
+        	if (result != null) {
+        		String pop = result.pop();
+        		logger.debug("Acking [pop={}]", pop);
+        		if (result.finished()) {
+        			ObjectMapper mapper = new ObjectMapper();
+        			String msg = mapper.writeValueAsString(result);
+        			db.publish("phish", msg);
+        			ackIndex.remove(suffix);
+        			return;
+        		}
         	}
-    		if (!result.RDempty()) {
-    			String rd = result.popRD();
-    			result.addRD(rd);
-    		}
-    		if (!result.REMempty()) {
-    			String rem = result.popREM();
-    			result.addREM(rem);
-    		}
-    		if (result.RDempty() && result.REMempty()) {
-    			ObjectMapper mapper = new ObjectMapper();
-    			String msg = mapper.writeValueAsString(result);
-    			db.publish("phish", msg);
-    			ackIndex.remove(suffix);
-    		}
 		} catch (JsonProcessingException e) {
 			logger.error("Could not send acknowledgment to the intersection bolt", e);
 		}

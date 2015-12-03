@@ -17,14 +17,22 @@ public class IntersectionResult {
 	
 	private Map<String, Collection<String>> RDTermindex;
 	private Map<String, Collection<String>> REMTermindex;
+	private Map<String, Collection<String>> MLDTermindex;
+	private Map<String, Collection<String>> MLDPSTermindex;
 	private BloomFilter<String> ASrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 	private BloomFilter<String> RELrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 	private BloomFilter<String> ASrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 	private BloomFilter<String> RELrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 
-	public IntersectionResult(Map<String, Collection<String>> RDTermindex, Map<String, Collection<String>> REMTermindex) {
+	public IntersectionResult(
+		Map<String, Collection<String>> RDTermindex,
+		Map<String, Collection<String>> REMTermindex,
+		Map<String, Collection<String>> MLDTermindex,
+		Map<String, Collection<String>> MLDPSTermindex) {
 		this.RDTermindex = RDTermindex;
 		this.REMTermindex = REMTermindex;
+		this.MLDTermindex = MLDTermindex;
+		this.MLDPSTermindex = MLDPSTermindex;
 	}
 
 	public void init() {
@@ -129,13 +137,11 @@ public class IntersectionResult {
 	}
 
 	public Integer MLDRES() {
-		// FIXME: we need to know the MLD
-		return -1;
+		return MLDTermindex.size() == 0 ? 0 : 1;
 	}
 	
 	public Integer MLDPSRES() {
-		// FIXME: we need to know the MLD.PS
-		return -1;
+		return MLDPSTermindex.size() == 0 ? 0 : 1;
 	}
 	
 	public Integer RANKING() {

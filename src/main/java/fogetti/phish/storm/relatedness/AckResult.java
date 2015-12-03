@@ -11,6 +11,9 @@ import java.util.stream.Collectors;
 public class AckResult implements Serializable {
 
 	private static final long serialVersionUID = 3990008783759688342L;
+	public boolean allsent;
+	public String MLD;
+	public String MLDPS;
 	public String URL;
 	public Set<String> RDurl = new HashSet<>();
 	public Set<String> REMurl = new HashSet<>();
@@ -39,23 +42,29 @@ public class AckResult implements Serializable {
 		}
 	}
 	
-	public String popRD() {
-		return RDstack.pop();
+	public String pop() {
+		if (!RDstack.isEmpty()) {
+			String pop = RDstack.pop();
+			addRD(pop);
+			return pop;
+		}
+		if (!REMstack.isEmpty()) {
+			String pop = REMstack.pop();
+			addREM(pop);
+			return pop;
+		}
+		return null;
 	}
 
-	public String popREM() {
-		return REMstack.pop();
-	}
-	
 	public boolean addAllREM(Collection<String> s) {
 		return REMurl.addAll(s);
 	}
 	
-	public boolean RDempty() {
+	private boolean RDempty() {
 		return RDstack.empty();
 	}
 	
-	public boolean REMempty() {
+	private boolean REMempty() {
 		return REMstack.empty();
 	}
 	
@@ -80,6 +89,14 @@ public class AckResult implements Serializable {
 		return REMurl.contains(s);		
 	}
 
+	public boolean finished() {
+		return RDempty() && REMempty() && allsent;
+	}
+	
+	public void setAllsent(boolean allsent) {
+		this.allsent = allsent;
+	}
+
 	public Map<String, Collection<String>> getREMTerms(Map<String, Collection<String>> termindex) {
 		Map<String, Collection<String>> REMTermindex = 
 			termindex
@@ -96,6 +113,26 @@ public class AckResult implements Serializable {
 			.entrySet()
 			.stream()
 			.filter(termEntry -> RDurl.contains(termEntry.getKey()))
+			.collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+		return RDTermindex;
+	}
+
+	public Map<String, Collection<String>> getMLDTerms(Map<String, Collection<String>> termindex) {
+		Map<String, Collection<String>> RDTermindex = 
+			termindex
+			.entrySet()
+			.stream()
+			.filter(termEntry -> MLD.equals(termEntry.getKey()))
+			.collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+		return RDTermindex;
+	}
+
+	public Map<String, Collection<String>> getMLDPSTerms(Map<String, Collection<String>> termindex) {
+		Map<String, Collection<String>> RDTermindex = 
+			termindex
+			.entrySet()
+			.stream()
+			.filter(termEntry -> MLDPS.equals(termEntry.getKey()))
 			.collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
 		return RDTermindex;
 	}
