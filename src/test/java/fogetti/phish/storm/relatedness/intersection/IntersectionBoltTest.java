@@ -9,7 +9,7 @@ import java.util.HashSet;
 
 import org.junit.Test;
 
-import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.task.OutputCollector;
 import backtype.storm.tuple.Tuple;
 
 public class IntersectionBoltTest {
@@ -33,9 +33,10 @@ public class IntersectionBoltTest {
 		when(input.getValue(0)).thenReturn(new HashSet<String>());
 		when(input.getStringByField("segment")).thenReturn("something~http://valami.com");
 		when(input.getStringByField("url")).thenReturn("http://google.com");
-		BasicOutputCollector collector = mock(BasicOutputCollector.class);
+		OutputCollector collector = mock(OutputCollector.class);
 		// When the input is empty
-		iBolt.execute(input, collector);
+		iBolt.prepare(null, null, collector);
+		iBolt.execute(input);
 
 		// Then execute succeeds
 		verify(input, atLeast(1)).getValue(0);

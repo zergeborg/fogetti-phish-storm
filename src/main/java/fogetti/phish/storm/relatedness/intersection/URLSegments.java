@@ -23,7 +23,7 @@ public class URLSegments {
 			termindex.put(segment, termset);
 		}
 	}
-	
+
 	public void removeIf(Predicate<? super Map.Entry<String, Collection<String>>> filter) {
 		termindex.entrySet().removeIf(filter);
 	}
@@ -38,5 +38,17 @@ public class URLSegments {
 		Map<String, Collection<String>> rdTerms = result.getRDTerms(termindex);
 		logger.info("RDTerms[{}]", rdTerms.values());
 		return rdTerms;
+	}
+
+	public Map<String, Collection<String>> getMLDTerms(AckResult result) {
+		Map<String, Collection<String>> mldTerms = result.getMLDTerms(termindex);
+		logger.info("MLDTerms[{}]", mldTerms.values());
+		return mldTerms;
+	}
+
+	public Map<String, Collection<String>> getMLDPSTerms(AckResult result) {
+		Map<String, Collection<String>> mldpsTerms = result.getMLDPSTerms(termindex);
+		logger.info("MLDPSTerms[{}]", mldpsTerms.values());
+		return mldpsTerms;
 	}
 }
