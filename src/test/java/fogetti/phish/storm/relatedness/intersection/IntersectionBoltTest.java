@@ -15,16 +15,6 @@ import backtype.storm.tuple.Tuple;
 public class IntersectionBoltTest {
 
 	@Test
-	public void canCreate() throws Exception {
-		// Given we want to create an IntersectionBolt
-
-		// When we call the constructor
-		IntersectionBolt iBolt = new IntersectionBolt(null);
-
-		// Then it succeeds
-	}
-	
-	@Test
 	public void receivesEmptySet() throws Exception {
 		// Given we want to compute intersections
 		IntersectionBolt iBolt = new IntersectionBolt(null);

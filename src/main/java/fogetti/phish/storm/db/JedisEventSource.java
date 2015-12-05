@@ -2,7 +2,6 @@ package fogetti.phish.storm.db;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import org.slf4j.Logger;
@@ -12,30 +11,17 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
-public class RedisPersistency implements Persistency, Runnable {
+public class JedisEventSource implements Runnable {
 
-	private static final long serialVersionUID = 3896918057489260695L;
-
-	private static final Logger logger = LoggerFactory.getLogger(RedisPersistency.class);
-	
+	private static final Logger logger = LoggerFactory.getLogger(JedisEventSource.class);
 	private final JedisPool jedispool;
-	private final BlockingQueue<PublishMessage> publishq = new ArrayBlockingQueue<>(1);
-	
-	private static class PublishMessage {
-		String channel;
-		String msg;
-		
-		public PublishMessage(String channel, String msg) {
-			this.channel = channel;
-			this.msg = msg;
-			
-		}
+	private final BlockingQueue<PublishMessage> publishq;
+
+	public JedisEventSource(int port, int timeout, BlockingQueue<PublishMessage> publishq) {
+		this.publishq = publishq;
+		this.jedispool = configureRedis(port, timeout);
 	}
-	
-	public RedisPersistency(int port, int timeout) {
-		jedispool = configureRedis(port, timeout);
-	}
-	
+
 	@Override
 	public void run() {
 		while (!Thread.currentThread().isInterrupted()) {
@@ -52,15 +38,6 @@ public class RedisPersistency implements Persistency, Runnable {
 		}
 	}
 	
-	@Override
-	public void publish(String channel, String msg) {
-		try {
-			publishq.put(new PublishMessage(channel, msg));
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-	}
-
 	private JedisPool configureRedis(int port, int timeout) {
 		InetAddress bindAddress = null;
 		try {

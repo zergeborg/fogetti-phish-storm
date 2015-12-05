@@ -136,6 +136,14 @@ public class IntersectionResult {
 		return RELrem.getEstimatedPopulation() / REMTermindex.keySet().size();
 	}
 
+	Double RATIOARD() {
+		return ASrd.getEstimatedPopulation() / RDTermindex.keySet().size();
+	}
+	
+	Double RATIORRD() {
+		return RELrd.getEstimatedPopulation() / RDTermindex.keySet().size();
+	}
+
 	public Integer MLDRES() {
 		return MLDTermindex.size() == 0 ? 0 : 1;
 	}
@@ -148,7 +156,7 @@ public class IntersectionResult {
 		// FIXME: we should call the Alexa ranking service
 		return -1;
 	}
-	
+
 	private Double jaccardIndex(BloomFilter<String> first,
 		BloomFilter<String> second,
 		BloomFilter<String> third,

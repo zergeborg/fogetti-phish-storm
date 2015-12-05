@@ -24,11 +24,11 @@ public class IntersectionBolt extends BaseRichBolt implements JedisCallback {
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
-	private final IntersectionAction bloomfilter;
+	private final IntersectionAction intersectionAction;
 	private OutputCollector collector;
 	
-	public IntersectionBolt(IntersectionAction bloomfilter) {
-		this.bloomfilter = bloomfilter;
+	public IntersectionBolt(IntersectionAction intersectionAction) {
+		this.intersectionAction = intersectionAction;
 	}
 
 	@Override
@@ -69,7 +69,7 @@ public class IntersectionBolt extends BaseRichBolt implements JedisCallback {
 			AckResult result = mapper.readValue(message, AckResult.class);
 			IntersectionResult intersection = initIntersectionResult(result);
 			logIntersectionResult(intersection);
-			bloomfilter.run();
+			intersectionAction.run();
 			logger.info("Message [{}] intersected", message);
 		} catch (IOException e) {
 			logger.info("Message [{}] failed", message, e);
