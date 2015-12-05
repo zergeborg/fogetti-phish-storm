@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -24,8 +26,10 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
-import fogetti.phish.storm.db.Persistency;
-import fogetti.phish.storm.db.RedisPersistency;
+import fogetti.phish.storm.db.JedisEventSource;
+import fogetti.phish.storm.db.PublishMessage;
+import fogetti.phish.storm.db.IPublishing;
+import fogetti.phish.storm.db.Publishing;
 import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 
 /**
@@ -57,30 +61,32 @@ public class URLSpout extends BaseRichSpout {
 	private Map<String, AckResult> ackIndex = new HashMap<>();
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
 	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
-	private transient Persistency db;
+	private transient IPublishing publisher;
 
 	public URLSpout() {
 	}
 
-	public URLSpout(Persistency db) {
-		this.db = db;
+	public URLSpout(IPublishing db) {
+		this.publisher = db;
 	}
 
 	@Override
 	@SuppressWarnings("rawtypes")
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
-		this.db = db();
+		this.publisher = publisher();
 		this.urllist = readURLListFromFile();
 		this.matcher = readPublicSuffixListFromFile();
 		this.lookup = readCountFromFile();
 		this.iterator = urllist.iterator();
 	}
 
-	private Persistency db() {
-		RedisPersistency db = new RedisPersistency(6379, 2000);
-		new Thread(db, "publisherThread").start();
-		return db;
+	private IPublishing publisher() {
+		BlockingQueue<PublishMessage> publishq = new ArrayBlockingQueue<>(1);
+		Publishing publisher = new Publishing(publishq);
+		JedisEventSource source = new JedisEventSource(6379, 2000, publishq);
+		new Thread(source, "publisherThread").start();
+		return publisher;
 	}
 
 	private List<String> readURLListFromFile() {
@@ -284,7 +290,7 @@ public class URLSpout extends BaseRichSpout {
         		if (result.finished()) {
         			ObjectMapper mapper = new ObjectMapper();
         			String msg = mapper.writeValueAsString(result);
-        			db.publish("phish", msg);
+        			publisher.publish("phish", msg);
         			ackIndex.remove(suffix);
         			return;
         		}
