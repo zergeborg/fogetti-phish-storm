@@ -1,7 +1,11 @@
 package fogetti.phish.storm.io;
 
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -13,6 +17,7 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.util.FileManager;
 
+@Ignore
 public class RDFReadingTest {
 
 	@Ignore
@@ -29,7 +34,6 @@ public class RDFReadingTest {
 		model.write(System.out);
 	}
 	
-	@Ignore
     @Test
 	public void readWithSAX() throws Exception {
 		// Given
@@ -39,7 +43,10 @@ public class RDFReadingTest {
     	XMLReader r = XMLReaderFactory.createXMLReader();
 
 		// Then
-        r.setContentHandler(new RDFHandler());
-        r.parse(is);
+    	Path path = Paths.get("/Users/gergely.nagy/Downloads/App/PhishStorm/result/valid-urls.csv");
+    	try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+    	    r.setContentHandler(new RDFHandler(writer));
+    	    r.parse(is);
+    	}
 	}
 }
