@@ -1,0 +1,29 @@
+URLSpout:
+    + same URLs in ackIndex
+    + different URLs in ackIndex
+    - redis connection failed
+
+GoogleSemBolt:
+    + segment found in cache
+    + segment not found in cache
+    + redis connection failed
+    + google connection failed
+    + google request succeeds
+
+BingSemBolt:
+    + segment found in cache
+    + segment not found in cache
+    + redis connection failed
+    + bing connection failed
+    + bing request succeeds
+
+IntersectionBolt:
+    + segment not found in cache
+    + segment found in cache
+    + redis connection failed
+
+TrainingIntersectionAction:
+
+ClassifyingIntersectionAction:
+
+AlexaRanking:

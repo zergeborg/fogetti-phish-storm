@@ -11,13 +11,14 @@ import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
+import org.apache.storm.redis.bolt.AbstractRedisBolt;
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
@@ -26,32 +27,34 @@ import fogetti.phish.storm.wsdl.bing.webmaster.IWebmasterApi;
 import fogetti.phish.storm.wsdl.bing.webmaster.IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage;
 import fogetti.phish.storm.wsdl.bing.webmaster.Keyword;
 import fogetti.phish.storm.wsdl.bing.webmaster.WebmasterApi;
+import redis.clients.jedis.JedisCommands;
 
-public class BingSemBolt extends BaseRichBolt {
+public class BingSemBolt extends AbstractRedisBolt {
 
 	private static final long serialVersionUID = -5744889615761052666L;
 	private static final Logger logger = LoggerFactory.getLogger(BingSemBolt.class);
-	private OutputCollector collector;
 	private transient IWebmasterApi api;
 	
-	public BingSemBolt() {
+	public BingSemBolt(JedisPoolConfig config) {
+		super(config);
 		this.api = getApi();
 	}
 
-	public BingSemBolt(IWebmasterApi api) {
+	public BingSemBolt(IWebmasterApi api, JedisPoolConfig config) {
+		super(config);
 		this.api = api;
 	}
 
 	@Override
 	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		this.collector = collector;
+		super.prepare(stormConf, context, collector);
 		this.api = getApi();
 	}
 
 	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector, IWebmasterApi api) {
-		this.collector = collector;
+		super.prepare(stormConf, context, collector);
 		this.api = api;
 	}
 
@@ -76,15 +79,27 @@ public class BingSemBolt extends BaseRichBolt {
 	}
 
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
+		JedisCommands jedisCommand = null;
 		try {
 			String segment = input.getStringByField("segment");
 			String url = input.getStringByField("url");
-			ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(segment, "", "", startDate , endDate);
-			collector.emit(input, new Values(calculateSearches(relatedKeywords), segment, url));
+			
+	        jedisCommand = getInstance();
+            Set<String> lookupValue = jedisCommand.smembers(segment);
+            if (lookupValue == null || lookupValue.isEmpty()) {
+            	logger.debug("Cached Bing result not found for [segment={}]", segment);
+            	ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(segment, "", "", startDate , endDate);
+            	lookupValue = calculateSearches(relatedKeywords);
+            	logger.trace("Result [{}]", relatedKeywords);
+            } else {
+            	logger.debug("Found cached Bing result found for [segment={}]", segment);
+            }
+			collector.emit(input, new Values(lookupValue, segment, url));
 			collector.ack(input);
-			logger.trace("Result [{}]", relatedKeywords);
 		} catch (IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage e) {
 			logger.error("Bing Keyword Stats request failed", e);
+		} finally {
+			returnInstance(jedisCommand);
 		}
 	}
 	

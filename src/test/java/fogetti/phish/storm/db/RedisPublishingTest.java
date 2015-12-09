@@ -68,13 +68,13 @@ public class RedisPublishingTest {
 
 	private Publishing startPublishingThread(BlockingQueue<PublishMessage> publishq) throws Exception {
 		Publishing db = new SpyingRedisPublishing(publishq);
-		JedisEventSource source = new JedisEventSource(6379, 2000, publishq);
+		JedisEventSource source = new JedisEventSource("localhost", 6379, 2000, null, publishq);
 		new Thread(source, "publisherThread").start();
 		return db;
 	}
 	
 	private JedisCallback startSubscribingThread(JedisCallback callback) throws Exception {
-		JedisListener listener = new JedisListener(6379, 2000, "phish", callback);
+		JedisListener listener = new JedisListener("localhost", 6379, 2000, null, "phish", callback);
 		new Thread(listener, "subscriberThread").start();
 		TimeUnit.MILLISECONDS.sleep(100);
 		return callback;
