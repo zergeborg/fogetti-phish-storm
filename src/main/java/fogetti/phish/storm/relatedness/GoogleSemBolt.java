@@ -4,8 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.storm.redis.bolt.AbstractRedisBolt;
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.freaknet.gtrends.api.GoogleAuthenticator;
 import org.freaknet.gtrends.api.GoogleTrendsClient;
 import org.freaknet.gtrends.api.GoogleTrendsCsvParser;
@@ -18,35 +21,37 @@ import org.slf4j.LoggerFactory;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
+import redis.clients.jedis.JedisCommands;
 
-public class GoogleSemBolt extends BaseRichBolt {
+public class GoogleSemBolt extends AbstractRedisBolt {
 
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
 
-	private OutputCollector collector;
 	private GoogleTrendsClient client;
 	private final String uname;
 	private final String pword;
 
-	public GoogleSemBolt(String uname, String pword) {
+	public GoogleSemBolt(String uname, String pword, JedisPoolConfig config) {
+		super(config);
 		this.uname = uname;
 		this.pword = pword;
 	}
 	
-	public GoogleSemBolt(GoogleTrendsClient client) {
+	public GoogleSemBolt(GoogleTrendsClient client, JedisPoolConfig config) {
+		super(config);
 		this.uname = "";
 		this.pword = "";
 		this.client = client;
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		this.collector = collector;
+		super.prepare(stormConf, context, collector);
 		this.client = getClient();
 	}
 
@@ -60,22 +65,34 @@ public class GoogleSemBolt extends BaseRichBolt {
 	public void execute(Tuple input) {
 		String segment = input.getStringByField("segment");
 		String url = input.getStringByField("url");
+		JedisCommands jedisCommand = null;
 		try {
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
-			String csvresult = client.execute(request);
-			collector.emit(input, new Values(calculateSearches(csvresult), segment, url));
+			
+	        jedisCommand = getInstance();
+            Set<String> lookupValue = jedisCommand.smembers(segment);
+            if (lookupValue == null || lookupValue.isEmpty()) {
+            	logger.debug("Cached Google result not found for [segment={}]", segment);
+            	String csvresult = client.execute(request);
+            	lookupValue = calculateSearches(csvresult);
+            	logger.trace("Result [{}]", csvresult);
+            } else {
+            	logger.debug("Found cached Google result found for [segment={}]", segment);
+            }
+			collector.emit(input, new Values(lookupValue, segment, url));
 			collector.ack(input);
-			logger.trace("Result [{}]", csvresult);
 		} catch (GoogleTrendsClientException e) {
 			logger.error("Google Trend request failed", e);
 		} catch (GoogleTrendsRequestException e) {
 			logger.error("Google Trend request failed", e);
-		} catch (Exception e) {
+		} catch (ConfigurationException e) {
 			logger.error("Google Trend request failed", e);
+		} finally {
+			returnInstance(jedisCommand);
 		}
 	}
 
-	private Set<String> calculateSearches(String searchresult) throws Exception {
+	private Set<String> calculateSearches(String searchresult) throws ConfigurationException {
 		HashSet<String> result = new HashSet<>();
 		GoogleTrendsCsvParser parser = new GoogleTrendsCsvParser(searchresult);
 		String topsearches = parser.getSectionAsString("Top searches", false);

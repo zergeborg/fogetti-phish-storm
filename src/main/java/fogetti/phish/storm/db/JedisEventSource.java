@@ -17,9 +17,9 @@ public class JedisEventSource implements Runnable {
 	private final JedisPool jedispool;
 	private final BlockingQueue<PublishMessage> publishq;
 
-	public JedisEventSource(int port, int timeout, BlockingQueue<PublishMessage> publishq) {
+	public JedisEventSource(String host, int port, int timeout, String password, BlockingQueue<PublishMessage> publishq) {
 		this.publishq = publishq;
-		this.jedispool = configureRedis(port, timeout);
+		this.jedispool = configureRedis(host, port, timeout, password);
 	}
 
 	@Override
@@ -38,16 +38,16 @@ public class JedisEventSource implements Runnable {
 		}
 	}
 	
-	private JedisPool configureRedis(int port, int timeout) {
+	private JedisPool configureRedis(String host, int port, int timeout, String password) {
 		InetAddress bindAddress = null;
 		try {
-			bindAddress = InetAddress.getByName("localhost");
+			bindAddress = InetAddress.getByName(host);
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
 		}
 
 		String ipAddress = (bindAddress == null) ? "127.0.0.1" : bindAddress.getHostAddress();
-		return new JedisPool(new JedisPoolConfig(), ipAddress, port, timeout);
+		return new JedisPool(new JedisPoolConfig(), ipAddress, port, timeout, password);
 	}
 
 }

@@ -1,15 +1,15 @@
 package fogetti.phish.storm.relatedness.suffix;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Stack;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.lang3.StringUtils;
 
 public class Rule {
 	public boolean exception = false;
-	public List<String> labels = new ArrayList<>();
+	private List<String> labels = new CopyOnWriteArrayList<>();
 
 	public String match(Domain domain) {
 		int ruleSize = labels.size();
@@ -55,5 +55,21 @@ public class Rule {
 	@Override
 	public String toString() {
 		return "Rule [labels=" + labels + "]";
+	}
+
+	public void addAllLabels(List<String> labels) {
+		this.labels.addAll(labels);
+	}
+
+	public int labelSize() {
+		return labels.size();
+	}
+
+	public void addLabel(String label) {
+		labels.add(label);
+	}
+
+	public void removeLabel(int index) {
+		labels.remove(index);
 	}
 }

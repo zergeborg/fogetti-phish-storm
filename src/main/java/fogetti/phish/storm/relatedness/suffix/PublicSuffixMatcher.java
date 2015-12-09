@@ -50,7 +50,7 @@ public class PublicSuffixMatcher {
 				nextLine = StringUtils.substringAfter(nextLine, "!");
 			}
 			nextLine = StringUtils.strip(nextLine, ".");
-			rule.labels.addAll(Arrays.asList(nextLine.split("\\.")));
+			rule.addAllLabels(Arrays.asList(nextLine.split("\\.")));
 			rules.add(rule);
 		}
 	}
@@ -72,7 +72,7 @@ public class PublicSuffixMatcher {
 		for (Rule rule : rules) {
 			if (!StringUtils.isEmpty(rule.match(domain))) {
 				find.matches.add(rule);
-				find.max = (find.max.labels.size() < rule.labels.size()) ? rule : find.max;
+				find.max = (find.max.labelSize() < rule.labelSize()) ? rule : find.max;
 				if (rule.exception)
 					find.exception = rule;
 			}
@@ -83,12 +83,12 @@ public class PublicSuffixMatcher {
 		Rule prevailing = null;
 		if (find.matches.isEmpty()) {
 			Rule asterisk = new Rule();
-			asterisk.labels.add("*");
+			asterisk.addLabel("*");
 			prevailing = asterisk;
 		} else {
 			if (find.exception != null) {
 				prevailing = find.exception;
-				prevailing.labels.remove(0);
+				prevailing.removeLabel(0);
 			} else {
 				prevailing = find.max;
 			}

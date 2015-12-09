@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.storm.redis.bolt.AbstractRedisBolt;
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,27 +16,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Tuple;
 import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.relatedness.AckResult;
+import redis.clients.jedis.JedisCommands;
 
-public class IntersectionBolt extends BaseRichBolt implements JedisCallback {
+public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback {
 
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
 	private final IntersectionAction intersectionAction;
-	private OutputCollector collector;
 	
-	public IntersectionBolt(IntersectionAction intersectionAction) {
+	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config) {
+		super(config);
 		this.intersectionAction = intersectionAction;
 	}
 
 	@Override
 	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-		this.collector = collector;
+		super.prepare(stormConf, context, collector);
 	}
 
 	@Override
@@ -42,10 +44,23 @@ public class IntersectionBolt extends BaseRichBolt implements JedisCallback {
 		@SuppressWarnings("unchecked")
 		Set<String> termset = (Set<String>) input.getValue(0);
 		String segment = input.getStringByField("segment");
+		save(segment, termset);
 		String url = input.getStringByField("url");
 		updateSegmentIndex(termset, segment, url);
 		logger.info("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
 		collector.ack(input);
+	}
+
+	private void save(String segment, Set<String> termset) {
+		JedisCommands jedis = null;
+		try {
+	        jedis = getInstance();
+	        if (!jedis.exists(segment) && !termset.isEmpty())
+	        	jedis.sadd(segment, termset.toArray(new String[termset.size()]));
+		} finally{
+			returnInstance(jedis);
+		}
+
 	}
 
 	private void updateSegmentIndex(Set<String> termset, String segment, String url) {

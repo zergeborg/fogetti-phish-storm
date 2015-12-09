@@ -2,8 +2,8 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,6 +14,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +27,9 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
+import fogetti.phish.storm.db.IPublishing;
 import fogetti.phish.storm.db.JedisEventSource;
 import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.db.IPublishing;
 import fogetti.phish.storm.db.Publishing;
 import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 
@@ -55,19 +56,22 @@ public class URLSpout extends BaseRichSpout {
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
 	private Iterator<String> iterator;
-	private PublicSuffixMatcher matcher;
 	private Map<String, List<String>> memomap = new HashMap<>();
 	private Map<String, Long> lookup = new HashMap<>();
-	private Map<String, AckResult> ackIndex = new HashMap<>();
-	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
-	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
+	private Map<String, AckResult> ackIndex;
+	private String countDataFile;
+	private String psDataFile;
+	private String urlDataFile;
 	private transient IPublishing publisher;
+	private BigInteger counter = BigInteger.valueOf(0);
+	private JedisPoolConfig config;
 
-	public URLSpout() {
-	}
-
-	public URLSpout(IPublishing db) {
-		this.publisher = db;
+	public URLSpout(String countDataFile, String psDataFile, String urlDataFile, Map<String, AckResult> ackIndex, JedisPoolConfig config) {
+		this.countDataFile = countDataFile;
+		this.psDataFile = psDataFile;
+		this.urlDataFile = urlDataFile;
+		this.ackIndex = ackIndex;
+		this.config = config;
 	}
 
 	@Override
@@ -76,21 +80,33 @@ public class URLSpout extends BaseRichSpout {
 		this.collector = collector;
 		this.publisher = publisher();
 		this.urllist = readURLListFromFile();
-		this.matcher = readPublicSuffixListFromFile();
 		this.lookup = readCountFromFile();
 		this.iterator = urllist.iterator();
 	}
 
-	private IPublishing publisher() {
+	IPublishing publisher() {
 		BlockingQueue<PublishMessage> publishq = new ArrayBlockingQueue<>(1);
 		Publishing publisher = new Publishing(publishq);
-		JedisEventSource source = new JedisEventSource(6379, 2000, publishq);
+		JedisEventSource source = new JedisEventSource(config.getHost(), config.getPort(), config.getTimeout(), config.getPassword(), publishq);
 		new Thread(source, "publisherThread").start();
 		return publisher;
 	}
 
 	private List<String> readURLListFromFile() {
-		return Arrays.asList("http://sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run","https://www.smbctb.co.jp/JPGCB/JPS/portal/SignonLocaleSwitch.do?locale=en_JP");
+		List<String> urls = new ArrayList<>();
+		loadUrls(urls);
+		return urls;
+	}
+
+	private void loadUrls(List<String> urls) {
+		try(Scanner scanner = new Scanner(new FileReader(urlDataFile));) {
+			while (scanner.hasNextLine()) {
+				urls.add(scanner.nextLine());
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 	}
 
 	private PublicSuffixMatcher readPublicSuffixListFromFile() {
@@ -135,26 +151,31 @@ public class URLSpout extends BaseRichSpout {
 			String URL = URLWithScheme.split("//")[1];
 			AckResult ackRes = new AckResult();
 			ackRes.URL = URL;
-			ackIndex.put(URL, ackRes);
+			ackIndex.put(URL+"~"+counter.toString(), ackRes);
 			calculateRDurl(URL, ackRes);
 			calculateREMurl(URL, ackRes);
 			ackRes.setAllsent(true);
 		}
+		counter = counter.add(BigInteger.valueOf(1));
 	}
 
 	void calculateRDurl(String URL, AckResult ackRes) {
 		String mldps = URL.split("/")[0];
 		ackRes.MLDPS = mldps;
+		PublicSuffixMatcher matcher = readPublicSuffixListFromFile();
 		String ps = matcher.findPublicSuffix(mldps);
 		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
 		ackRes.pushRD(mldps);
-		logger.debug("Emitting [{}]", "mldps"+mldps);
-		collector.emit(new Values(mldps, URL), "mldps"+mldps+"~"+URL);
+		emit(mldps, URL, "mldps"+mldps);
 		String mld = StringUtils.substringBeforeLast(mldps, "." + ps);
 		ackRes.MLD = mld;
 		ackRes.pushRD(mld);
-		logger.debug("Emitting [{}]", "mld"+mld);
-		collector.emit(new Values(mld, URL), "mld"+mld+"~"+URL);
+		emit(mld, URL, "mld"+mld);
+	}
+
+	private void emit(String word, String URL, String prefix) {
+		logger.debug("Emitting [{}]", prefix);
+		collector.emit(new Values(word, URL), prefix+"~"+URL+"~"+counter.toString());
 	}
 
 	void calculateREMurl(String URL, AckResult ackRes) {
@@ -208,8 +229,7 @@ public class URLSpout extends BaseRichSpout {
 	private void segments(List<String> segments, String URL, AckResult ackRes) {
 		for (String segment : segments) {
 			ackRes.pushREM(segment);
-			logger.debug("Emitting [{}]", segment);
-			collector.emit(new Values(segment, URL), segment+"~"+URL);
+			emit(segment, URL, segment);
 		}
 	}
 
@@ -276,8 +296,7 @@ public class URLSpout extends BaseRichSpout {
     @Override
     public void ack(Object msgId) {
 		String m = (String)msgId;
-		String[] split = m.split("~");
-		String suffix = split[1];
+		String suffix = StringUtils.substringAfter(m, "~");
 		ack(suffix);
     }
 

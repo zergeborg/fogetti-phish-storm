@@ -1,12 +1,17 @@
 package fogetti.phish.storm.integration;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 import fogetti.phish.storm.db.JedisListener;
+import fogetti.phish.storm.relatedness.AckResult;
 import fogetti.phish.storm.relatedness.BingSemBolt;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
@@ -18,29 +23,35 @@ public class PhishTopologyBuilder {
 
 	public static StormTopology build() throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
+		String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
+		String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
+		String urlDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/url-list.txt";
+		Map<String, AckResult> ackIndex = new HashMap<>();
 
 		Scanner console = new Scanner(System.in);
 		String uname = uname(console);
 		String pword = pword(console);
+		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
+	        .setHost("petrucci").setPort(6379).setPassword("Macska12").build();
 		console.close();
-		builder.setSpout("urlsource", new URLSpout(), 1);
+		builder.setSpout("urlsource", new URLSpout(countDataFile, psDataFile, urlDataFile, ackIndex, poolConfig), 1);
 		builder.setBolt("urlsplit", new URLBolt(), 7)
 			.fieldsGrouping("urlsource", new Fields("word", "url"));
-		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword), 7)
+		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword, poolConfig), 7)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"));
-		builder.setBolt("bingrelatedkeywords", new BingSemBolt(), 7)
+		builder.setBolt("bingrelatedkeywords", new BingSemBolt(poolConfig), 7)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"));
-		builder.setBolt("intersection", intersectionBolt())
+		builder.setBolt("intersection", intersectionBolt(poolConfig))
 			.globalGrouping("googletrends")
 			.globalGrouping("bingrelatedkeywords");
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}
 
-	private static IntersectionBolt intersectionBolt() throws Exception {
-		IntersectionAction bloomfilter = new IntersectionAction() { private static final long serialVersionUID = 5105509799523060930L; @Override public void run() {} };
-		IntersectionBolt callback = new IntersectionBolt(bloomfilter);
-		JedisListener listener = new JedisListener(6379, 2000, "phish", callback);
+	private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig) throws Exception {
+		IntersectionAction action = new IntersectionAction() { private static final long serialVersionUID = 5105509799523060930L; @Override public void run() {} };
+		IntersectionBolt callback = new IntersectionBolt(action, poolConfig);
+		JedisListener listener = new JedisListener(poolConfig.getHost(), poolConfig.getPort(), poolConfig.getTimeout(), poolConfig.getPassword(), "phish", callback);
 		new Thread(listener, "subscriberThread").start();
 		TimeUnit.MILLISECONDS.sleep(100);
 		return callback;
