@@ -9,7 +9,7 @@ import backtype.storm.generated.InvalidTopologyException;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.utils.Utils;
 
-public class PhishTopologyRunner {
+public class PhishTopologyLocalRunner {
 
 	public static void run(String[] args, StormTopology topology)
 			throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
