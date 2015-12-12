@@ -45,7 +45,6 @@
         </executions>
         <configuration>
           <createDependencyReducedPom>true</createDependencyReducedPom>
-          <minimizeJar>true</minimizeJar>
         </configuration>
       </plugin>
       <plugin>
