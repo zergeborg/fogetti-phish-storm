@@ -1,0 +1,1 @@
+JVMFLAGS='-Xms256m -Xmx256m'

@@ -1,0 +1,15 @@
+storm.zookeeper.servers:
+    - "dimebag"
+    - "petrucci"
+    - "hetfield"
+
+storm.zookeeper.port: 2181
+
+storm.local.dir: "/home/fogetti/downloads/apache-storm-0.10.0/storm-local"
+
+java.library.path: "/usr"
+
+nimbus.host: "dimebag"
+
+supervisor.slots.ports:
+    - 6700
