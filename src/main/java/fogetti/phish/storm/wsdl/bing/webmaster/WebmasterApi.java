@@ -1,7 +1,6 @@
 
 package fogetti.phish.storm.wsdl.bing.webmaster;
 
-import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -34,9 +33,7 @@ public class WebmasterApi
         WebServiceException e = null;
         ClassLoader loader = WebmasterApi.class.getClassLoader();
         try {
-            File file = new File(loader.getResource(".").toURI());
-            File xml = new File(file.getAbsolutePath() + File.separator + "bing.webmasters.wsdl.xml");
-			url = xml.toURL();
+			url = loader.getResource("bing.webmasters.wsdl.xml").toURI().toURL();
         } catch (MalformedURLException ex) {
             e = new WebServiceException(ex);
         } catch (URISyntaxException ex) {
