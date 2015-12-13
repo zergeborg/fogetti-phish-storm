@@ -20,6 +20,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import backtype.storm.task.OutputCollector;
@@ -48,6 +49,10 @@ public class BingSemBoltTest {
 
 		private static final long serialVersionUID = -4874909073941561461L;
 
+		public TestDoubleBingSemBolt(JedisPoolConfig config) {
+			super(config);
+		}
+		
 		public TestDoubleBingSemBolt(IWebmasterApi api, JedisPoolConfig config) {
 			super(api, config);
 		}
@@ -200,6 +205,22 @@ public class BingSemBoltTest {
 		verify(api, atLeast(1)).getRelatedKeywords(paypal, country, language, startDate , endDate);
 		verify(collector, atLeast(1)).emit((Tuple)anyObject(), anyObject());
 		verify(collector, atLeast(1)).ack(anyObject());
+	}
+	
+	@Ignore
+	@Test
+	public void integration() throws Exception {
+		// Given we want to get related words for a keyword
+		Tuple keyword = mock(Tuple.class);
+		when(keyword.getStringByField("segment")).thenReturn(paypal);
+
+		// When we send a request to bing
+		OutputCollector collector = mock(OutputCollector.class);
+		BingSemBolt bolt = new TestDoubleBingSemBolt(config);
+		bolt.prepare(null, null, collector);
+		bolt.execute(keyword, startDate, endDate);
+
+		// Then
 	}
 	
 }

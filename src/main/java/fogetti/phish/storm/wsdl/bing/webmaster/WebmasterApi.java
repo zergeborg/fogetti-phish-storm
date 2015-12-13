@@ -19,7 +19,7 @@ import javax.xml.ws.WebServiceFeature;
  * Generated source version: 2.2
  * 
  */
-@WebServiceClient(name = "WebmasterApi", targetNamespace = "http://schemas.datacontract.org/2004/07/Microsoft.Bing.Webmaster.Api", wsdlLocation = "file:/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/java/bing.webmasters.wsdl.xml")
+@WebServiceClient(name = "WebmasterApi", targetNamespace = "http://schemas.datacontract.org/2004/07/Microsoft.Bing.Webmaster.Api", wsdlLocation = "classpath:bing.webmasters.wsdl.xml")
 public class WebmasterApi
     extends Service
 {
