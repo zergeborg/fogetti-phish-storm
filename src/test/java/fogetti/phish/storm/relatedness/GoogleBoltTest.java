@@ -6,7 +6,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashSet;
 
-import org.apache.storm.commons.io.FileUtils;
+import org.apache.commons.io.FileUtils;
 import org.freaknet.gtrends.api.GoogleTrendsCsvParser;
 
 public class GoogleBoltTest {
