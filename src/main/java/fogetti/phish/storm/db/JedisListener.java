@@ -1,28 +1,26 @@
 package fogetti.phish.storm.db;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
+import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
+import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
 public class JedisListener extends JedisPubSub implements Runnable {
 
 	private static final Logger logger = LoggerFactory.getLogger(JedisListener.class);
 
-	private final JedisCallback callback;
-	private final JedisPool jedispool;
-	private final String channel;
+	private JedisCallback callback;
+	private String channel;
+	private JedisCommandsInstanceContainer container;
 	
-	public JedisListener(String host, int port, int timeout, String password, String channel, JedisCallback callback) {
+	public JedisListener(JedisPoolConfig config, String channel, JedisCallback callback) {
 		this.channel = channel;
 		this.callback = callback;
-		this.jedispool = configureRedis(host, port, timeout, password);
+		this.container = JedisCommandsContainerBuilder.build(config);
 	}
 	
 	@Override
@@ -33,7 +31,7 @@ public class JedisListener extends JedisPubSub implements Runnable {
 	@Override
 	public void run() {
 		while (!Thread.currentThread().isInterrupted()) {
-			try (Jedis jedis = jedispool.getResource()) {
+			try (Jedis jedis = (Jedis) container.getInstance()) {
 				logger.info("Subscribing");
 				jedis.subscribe(this, channel);
 			} catch (Exception e) {
@@ -41,18 +39,6 @@ public class JedisListener extends JedisPubSub implements Runnable {
 				Thread.currentThread().interrupt();
 			}
 		}
-	}
-
-	private JedisPool configureRedis(String host, int port, int timeout, String password) {
-		InetAddress bindAddress = null;
-		try {
-			bindAddress = InetAddress.getByName(host);
-		} catch (UnknownHostException e1) {
-			e1.printStackTrace();
-		}
-
-		String ipAddress = (bindAddress == null) ? "127.0.0.1" : bindAddress.getHostAddress();
-		return new JedisPool(new JedisPoolConfig(), ipAddress, port, timeout, password);
 	}
 
 }

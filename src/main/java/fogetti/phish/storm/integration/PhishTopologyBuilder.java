@@ -2,14 +2,12 @@ package fogetti.phish.storm.integration;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
-import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
 import fogetti.phish.storm.relatedness.BingSemBolt;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
@@ -28,7 +26,7 @@ public class PhishTopologyBuilder {
 		String pword = System.getProperty("pword");
 		return build(countDataFile, psDataFile, urlDataFile, uname, pword);
 	}
-	
+
 	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String uname, String pword) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
 		Map<String, AckResult> ackIndex = new HashMap<>();
@@ -55,9 +53,6 @@ public class PhishTopologyBuilder {
 	private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig) throws Exception {
 		IntersectionAction action = new IntersectionAction() { private static final long serialVersionUID = 5105509799523060930L; @Override public void run() {} };
 		IntersectionBolt callback = new IntersectionBolt(action, poolConfig);
-		JedisListener listener = new JedisListener(poolConfig.getHost(), poolConfig.getPort(), poolConfig.getTimeout(), poolConfig.getPassword(), "phish", callback);
-		new Thread(listener, "subscriberThread").start();
-		TimeUnit.MILLISECONDS.sleep(100);
 		return callback;
 	}
 

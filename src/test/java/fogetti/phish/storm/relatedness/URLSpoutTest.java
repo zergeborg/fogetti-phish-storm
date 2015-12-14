@@ -14,12 +14,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import backtype.storm.spout.SpoutOutputCollector;
-import fogetti.phish.storm.db.IPublishing;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCommands;
 
 public class URLSpoutTest {
 
@@ -27,28 +29,32 @@ public class URLSpoutTest {
 	private String countDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/1gram-count.txt";
 	private String psDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/main/resources/public-suffix-list.dat";
 	private String urlDataFile = "/Users/gergely.nagy/Work/git/fogetti-phish-storm/src/test/resources/same-url-list.txt";
-	
+
 	private class TestDoubleURLSpout extends URLSpout {
 
 		private static final long serialVersionUID = -7748829151740848266L;
 
 		public TestDoubleURLSpout(String countDataFile, String psDataFile, String urlDataFile, Map<String, AckResult> ackIndex) {
-			super(countDataFile, psDataFile, urlDataFile, ackIndex, null);
+			super(countDataFile, psDataFile, urlDataFile, ackIndex, mock(JedisPoolConfig.class));
 		}
-		
+
 		@Override
-		IPublishing publisher() {
-			return mock(IPublishing.class);
+		protected JedisCommands getInstance() {
+			return mock(Jedis.class);
+		}
+
+		@Override
+		protected void returnInstance(JedisCommands instance) {
 		}
 	}
-	
+
 	@Before
 	public void setup() throws Exception {
 		countDataFile = new File(loader.getResource("1gram-count.txt").toURI()).getAbsolutePath();
 		psDataFile = new File(loader.getResource("public-suffix-list.dat").toURI()).getAbsolutePath();
 		urlDataFile = new File(loader.getResource("same-url-list.txt").toURI()).getAbsolutePath();
 	}
-	
+
 	@Test
 	public void segmentOne() throws Exception {
 		// Given we want to segment a word before calculating relatedness
@@ -57,7 +63,7 @@ public class URLSpoutTest {
 
 		// When we submit "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
 		List<String> segment = spout.segment("itwasabrightcolddayinaprilandtheclockswerestrikingthirteen");
-		
+
 		// Then it returns [it, was, a, bright, cold, day, in, april, and, the, clocks, were, striking, thirteen]
 		System.out.println(segment);
 		List<String> expected = Arrays.asList(new String[]{"it", "was", "a", "bright", "cold", "day", "in", "april", "and", "the", "clocks", "were", "striking", "thirteen"});
@@ -72,13 +78,13 @@ public class URLSpoutTest {
 
 		// When we submit "inaholeinthegroundtherelivedahobbitnotanastydirtywetholefilledwiththeendsofwormsandanoozysmellnoryetadrybaresandyholewithnothinginittositdownonortoeatitwasahobbitholeandthatmeanscomfort"
 		List<String> segment = spout.segment("inaholeinthegroundtherelivedahobbitnotanastydirtywetholefilledwiththeendsofwormsandanoozysmellnoryetadrybaresandyholewithnothinginittositdownonortoeatitwasahobbitholeandthatmeanscomfort");
-		
+
 		// Then it returns [in, a, hole, in, the, ground, there, lived, a, hobbit, not, a, nasty, dirty, wet, hole, filled, with, the, ends, of, worms, and, an, oozy, smell, nor, yet, a, dry, bare, sandy, hole, with, nothing, in, it, to, sitdown, on, or, to, eat, it, was, a, hobbit, hole, and, that, means, comfort]
 		System.out.println(segment);
 		List<String> expected = Arrays.asList(new String[]{"in", "a", "hole", "in", "the", "ground", "there", "lived", "a", "hobbit", "not", "a", "nasty", "dirty", "wet", "hole", "filled", "with", "the", "ends", "of", "worms", "and", "an", "oozy", "smell", "nor", "yet", "a", "dry", "bare", "sandy", "hole", "with", "nothing", "in", "it", "to", "sitdown", "on", "or", "to", "eat", "it", "was", "a", "hobbit", "hole", "and", "that", "means", "comfort"});
 		assertEquals("The segmentation was wrong", expected.toString(), segment.toString());
 	}
-	
+
 	@Test
 	@SuppressWarnings("unchecked")
 	public void nextTuple() throws Exception {
@@ -95,7 +101,7 @@ public class URLSpoutTest {
 		// and segments the words found in the URL
 		verify(spy, atLeast(1)).emit(anyObject(), anyString());
 	}
-	
+
 	@Test
 	@SuppressWarnings("unchecked")
 	public void sameURLsInAckIndex() throws Exception {
@@ -129,7 +135,7 @@ public class URLSpoutTest {
 		verify(ackIndex, atLeast(1)).remove(sezo2);
 		verify(ackIndex, atLeast(1)).remove(sezo3);
 	}
-	
+
 	@Test
 	@SuppressWarnings("unchecked")
 	public void differentURLsInAckIndex() throws Exception {
@@ -163,7 +169,7 @@ public class URLSpoutTest {
 		verify(ackIndex, atLeast(1)).remove(url2);
 		verify(ackIndex, atLeast(1)).remove(url3);
 	}
-	
+
 	@Ignore
 	@Test
 	public void redisConnectionFailed() throws Exception {
