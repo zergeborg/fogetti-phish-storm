@@ -41,7 +41,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		this.uname = uname;
 		this.pword = pword;
 	}
-	
+
 	public GoogleSemBolt(GoogleTrendsClient client, JedisPoolConfig config) {
 		super(config);
 		this.uname = "";
@@ -58,8 +58,8 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	GoogleTrendsClient getClient() {
 		DefaultHttpClient httpClient = new DefaultHttpClient();
-	    GoogleAuthenticator authenticator = new GoogleAuthenticator(uname, pword, httpClient);
-	    return new GoogleTrendsClient(authenticator, httpClient);
+		GoogleAuthenticator authenticator = new GoogleAuthenticator(uname, pword, httpClient);
+		return new GoogleTrendsClient(authenticator, httpClient);
 	}
 
 	@Override
@@ -69,17 +69,17 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		JedisCommands jedisCommand = null;
 		try {
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
-			
-	        jedisCommand = getInstance();
-            Set<String> lookupValue = jedisCommand.smembers(segment);
-            if (lookupValue == null || lookupValue.isEmpty()) {
-            	logger.debug("Cached Google result not found for [segment={}]", segment);
-            	String csvresult = client.execute(request);
-            	lookupValue = calculateSearches(csvresult);
-            	logger.trace("Result [{}]", csvresult);
-            } else {
-            	logger.debug("Found cached Google result found for [segment={}]", segment);
-            }
+
+			jedisCommand = getInstance();
+			Set<String> lookupValue = new HashSet<>(jedisCommand.smembers(segment));
+			if (lookupValue == null || lookupValue.isEmpty()) {
+				logger.debug("Cached Google result not found for [segment={}]", segment);
+				String csvresult = client.execute(request);
+				lookupValue = calculateSearches(csvresult);
+				logger.trace("Result [{}]", csvresult);
+			} else {
+				logger.debug("Found cached Google result found for [segment={}]", segment);
+			}
 			collector.emit(input, new Values(lookupValue, segment, url));
 			collector.ack(input);
 		} catch (GoogleTrendsClientException e) {

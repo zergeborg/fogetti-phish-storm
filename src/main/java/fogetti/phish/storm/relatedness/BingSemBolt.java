@@ -85,7 +85,7 @@ public class BingSemBolt extends AbstractRedisBolt {
 			String url = input.getStringByField("url");
 			
 	        jedisCommand = getInstance();
-            Set<String> lookupValue = jedisCommand.smembers(segment);
+            Set<String> lookupValue = new HashSet<>(jedisCommand.smembers(segment));
             if (lookupValue == null || lookupValue.isEmpty()) {
             	logger.debug("Cached Bing result not found for [segment={}]", segment);
             	ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(segment, "", "", startDate , endDate);
