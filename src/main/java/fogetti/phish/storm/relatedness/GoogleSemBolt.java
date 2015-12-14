@@ -71,7 +71,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
 
 			jedisCommand = getInstance();
-			Set<String> lookupValue = new HashSet<>(jedisCommand.smembers(segment));
+			Set<String> lookupValue = jedisCommand.smembers(segment);
 			if (lookupValue == null || lookupValue.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				String csvresult = client.execute(request);
@@ -80,7 +80,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			} else {
 				logger.debug("Found cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(input, new Values(lookupValue, segment, url));
+			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, url));
 			collector.ack(input);
 		} catch (GoogleTrendsClientException e) {
 			if (e.getCause() instanceof GoogleAuthenticatorException) {
