@@ -13,6 +13,7 @@ import org.freaknet.gtrends.api.GoogleAuthenticator;
 import org.freaknet.gtrends.api.GoogleTrendsClient;
 import org.freaknet.gtrends.api.GoogleTrendsCsvParser;
 import org.freaknet.gtrends.api.GoogleTrendsRequest;
+import org.freaknet.gtrends.api.exceptions.GoogleAuthenticatorException;
 import org.freaknet.gtrends.api.exceptions.GoogleTrendsClientException;
 import org.freaknet.gtrends.api.exceptions.GoogleTrendsRequestException;
 import org.slf4j.Logger;
@@ -82,7 +83,11 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			collector.emit(input, new Values(lookupValue, segment, url));
 			collector.ack(input);
 		} catch (GoogleTrendsClientException e) {
-			logger.error("Google Trend request failed", e);
+			if (e.getCause() instanceof GoogleAuthenticatorException) {
+				logger.error("Google Trend request failed. Could not login");				
+			} else {
+				logger.error("Google Trend request failed", e);
+			}
 		} catch (GoogleTrendsRequestException e) {
 			logger.error("Google Trend request failed", e);
 		} catch (ConfigurationException e) {
