@@ -18,6 +18,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
 import fogetti.phish.storm.db.JedisCallback;
+import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
 import redis.clients.jedis.JedisCommands;
 
@@ -27,16 +28,20 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
 	private final IntersectionAction intersectionAction;
+	private JedisPoolConfig config;
 	
 	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config) {
 		super(config);
 		this.intersectionAction = intersectionAction;
+		this.config = config;
 	}
 
 	@Override
 	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		super.prepare(stormConf, context, collector);
+		JedisListener listener = new JedisListener(config, "phish", this);
+		new Thread(listener, "subscriberThread").start();
 	}
 
 	@Override

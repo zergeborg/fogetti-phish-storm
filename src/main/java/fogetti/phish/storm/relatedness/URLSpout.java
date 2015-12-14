@@ -10,11 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
+import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +27,10 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
-import fogetti.phish.storm.db.IPublishing;
-import fogetti.phish.storm.db.JedisEventSource;
 import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.db.Publishing;
 import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCommands;
 
 /**
  * Implementation of the following real time phishing classifier:
@@ -62,9 +61,9 @@ public class URLSpout extends BaseRichSpout {
 	private String countDataFile;
 	private String psDataFile;
 	private String urlDataFile;
-	private transient IPublishing publisher;
 	private BigInteger counter = BigInteger.valueOf(0);
 	private JedisPoolConfig config;
+	private JedisCommandsInstanceContainer container;
 
 	public URLSpout(String countDataFile, String psDataFile, String urlDataFile, Map<String, AckResult> ackIndex, JedisPoolConfig config) {
 		this.countDataFile = countDataFile;
@@ -78,18 +77,10 @@ public class URLSpout extends BaseRichSpout {
 	@SuppressWarnings("rawtypes")
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
-		this.publisher = publisher();
 		this.urllist = readURLListFromFile();
 		this.lookup = readCountFromFile();
 		this.iterator = urllist.iterator();
-	}
-
-	IPublishing publisher() {
-		BlockingQueue<PublishMessage> publishq = new ArrayBlockingQueue<>(1);
-		Publishing publisher = new Publishing(publishq);
-		JedisEventSource source = new JedisEventSource(config.getHost(), config.getPort(), config.getTimeout(), config.getPassword(), publishq);
-		new Thread(source, "publisherThread").start();
-		return publisher;
+		this.container = JedisCommandsContainerBuilder.build(config);
 	}
 
 	private List<String> readURLListFromFile() {
@@ -249,8 +240,8 @@ public class URLSpout extends BaseRichSpout {
 		List<SplitResult> splitRes = splits(text);
 		List<List<String>> candidates = candidates(splitRes);
 		List<String> result =
-				candidates.stream().max(
-						(List<String> o1, List<String> o2) -> pwords(o1).compareTo(pwords(o2))).get();
+			candidates.stream().max(
+				(List<String> o1, List<String> o2) -> pwords(o1).compareTo(pwords(o2))).get();
 		return result;
 	}
 
@@ -292,36 +283,66 @@ public class URLSpout extends BaseRichSpout {
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declare(new Fields("word", "url"));
 	}
-	
-    @Override
-    public void ack(Object msgId) {
+
+	@Override
+	public void ack(Object msgId) {
 		String m = (String)msgId;
 		String suffix = StringUtils.substringAfter(m, "~");
 		ack(suffix);
-    }
+	}
 
-    public void ack(String suffix) {
-    	try {
-        	AckResult result = ackIndex.get(suffix);
-        	if (result != null) {
-        		String pop = result.pop();
-        		logger.debug("Acking [pop={}]", pop);
-        		if (result.finished()) {
-        			ObjectMapper mapper = new ObjectMapper();
-        			String msg = mapper.writeValueAsString(result);
-        			publisher.publish("phish", msg);
-        			ackIndex.remove(suffix);
-        			return;
-        		}
-        	}
+	public void ack(String suffix) {
+		try {
+			AckResult result = ackIndex.get(suffix);
+			if (result != null) {
+				String pop = result.pop();
+				logger.debug("Acking [pop={}]", pop);
+				if (result.finished()) {
+					ObjectMapper mapper = new ObjectMapper();
+					String msg = mapper.writeValueAsString(result);
+					publish("phish", msg);
+					ackIndex.remove(suffix);
+					return;
+				}
+			}
 		} catch (JsonProcessingException e) {
 			logger.error("Could not send acknowledgment to the intersection bolt", e);
 		}
-    }
-    
-    @Override
-    public void fail(Object msgId) {
-    	String msg = (String)msgId;
-    	logger.debug("Message [{}] failed", msg);
-    }
+	}
+
+	private void publish(String channel, String msg) {
+		Jedis jedis = null;
+		try {
+			jedis = (Jedis) getInstance();
+			PublishMessage message = new PublishMessage(channel, msg);
+			logger.info("Publishing [Message={}]", message.msg);
+			jedis.publish(message.channel, message.msg);
+		} finally {
+			returnInstance(jedis);
+		}
+	}
+
+	@Override
+	public void fail(Object msgId) {
+		String msg = (String)msgId;
+		logger.debug("Message [{}] failed", msg);
+	}
+
+	/**
+	 * Borrow JedisCommands instance from container.<p></p>
+	 * JedisCommands is an interface which contains single key operations.
+	 * @return implementation of JedisCommands
+	 * @see JedisCommandsInstanceContainer#getInstance()
+	 */
+	protected JedisCommands getInstance() {
+		return this.container.getInstance();
+	}
+
+	/**
+	 * Return borrowed instance to container.
+	 * @param instance borrowed object
+	 */
+	protected void returnInstance(JedisCommands instance) {
+		this.container.returnInstance(instance);
+	}
 }
