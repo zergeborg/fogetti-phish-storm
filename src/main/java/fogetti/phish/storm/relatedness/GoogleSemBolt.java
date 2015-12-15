@@ -3,6 +3,7 @@ package fogetti.phish.storm.relatedness;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
@@ -68,6 +69,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		String url = input.getStringByField("url");
 		JedisCommands jedisCommand = null;
 		try {
+			TimeUnit.MILLISECONDS.sleep(500);
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
 
 			jedisCommand = getInstance();
@@ -92,6 +94,9 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			logger.error("Google Trend request failed", e);
 		} catch (ConfigurationException e) {
 			logger.error("Google Trend request failed", e);
+		} catch (InterruptedException e) {
+			logger.warn("Interrupted while sleeping");
+			Thread.currentThread().interrupt();
 		} finally {
 			returnInstance(jedisCommand);
 		}

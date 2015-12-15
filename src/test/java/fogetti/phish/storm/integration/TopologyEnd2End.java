@@ -17,7 +17,7 @@ public class TopologyEnd2End {
 		String uname = uname(console);
 		String pword = pword(console);
 		console.close();
-		StormTopology topology = PhishTopologyBuilder.build(countDataFile, psDataFile, urlDataFile, uname, pword);
+		StormTopology topology = PhishTopologyBuilder.build(countDataFile, psDataFile, urlDataFile, uname, pword, "localhost", 6379, null);
 		PhishTopologyLocalRunner.run(args, topology);
 		server.stop();
 	}

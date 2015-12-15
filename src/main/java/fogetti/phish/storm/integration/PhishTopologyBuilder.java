@@ -24,15 +24,15 @@ public class PhishTopologyBuilder {
 		String urlDataFile = System.getProperty("url.data.file");
 		String uname = System.getProperty("uname");
 		String pword = System.getProperty("pword");
-		return build(countDataFile, psDataFile, urlDataFile, uname, pword);
+		return build(countDataFile, psDataFile, urlDataFile, uname, pword, "petrucci", 6379, "Macska12");
 	}
 
-	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String uname, String pword) throws Exception {
+	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String uname, String pword, String redishost, Integer redisport, String redispword) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
 		Map<String, AckResult> ackIndex = new HashMap<>();
 
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
-	        .setHost("petrucci").setPort(6379).setPassword("Macska12").build();
+	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder.setSpout("urlsource", new URLSpout(countDataFile, psDataFile, urlDataFile, ackIndex, poolConfig), 1);
 		builder.setBolt("urlsplit", new URLBolt(), 1)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
