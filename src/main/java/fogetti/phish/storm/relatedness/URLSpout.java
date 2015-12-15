@@ -6,8 +6,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -54,7 +54,7 @@ public class URLSpout extends BaseRichSpout {
 	private double itervalues = 0.;
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
-	private Iterator<String> iterator;
+	private ListIterator<String> iterator;
 	private Map<String, List<String>> memomap = new HashMap<>();
 	private Map<String, Long> lookup = new HashMap<>();
 	private Map<String, AckResult> ackIndex;
@@ -79,7 +79,7 @@ public class URLSpout extends BaseRichSpout {
 		this.collector = collector;
 		this.urllist = readURLListFromFile();
 		this.lookup = readCountFromFile();
-		this.iterator = urllist.iterator();
+		this.iterator = urllist.listIterator();
 		this.container = JedisCommandsContainerBuilder.build(config);
 	}
 
@@ -325,7 +325,11 @@ public class URLSpout extends BaseRichSpout {
 	@Override
 	public void fail(Object msgId) {
 		String msg = (String)msgId;
-		logger.debug("Message [{}] failed", msg);
+		String suffix = StringUtils.substringAfter(msg, "~");
+		logger.debug("Message [msg={}] failed", msg);
+		String prefix = StringUtils.substringAfter(suffix, "~");
+		logger.warn("Requeueing [msg={}]", prefix);
+		iterator.add(prefix);
 	}
 
 	/**
