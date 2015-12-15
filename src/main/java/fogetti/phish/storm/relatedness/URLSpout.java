@@ -136,18 +136,28 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void nextTuple() {
+		// Check the case when we read first seen elements
 		if (iterator.hasNext()) {
 			String URLWithScheme = iterator.next();
-			logger.debug("Calculating relatedness for [{}]", URLWithScheme);
-			String URL = URLWithScheme.split("//")[1];
-			AckResult ackRes = new AckResult();
-			ackRes.URL = URL;
-			ackIndex.put(URL+"~"+counter.toString(), ackRes);
-			calculateRDurl(URL, ackRes);
-			calculateREMurl(URL, ackRes);
-			ackRes.setAllsent(true);
+			doNextTuple(URLWithScheme);
+		}
+		// Check the case when we read failed elements
+		else if (iterator.hasPrevious()) {
+			String URLWithScheme = iterator.previous();
+			doNextTuple(URLWithScheme);
 		}
 		counter = counter.add(BigInteger.valueOf(1));
+	}
+
+	private void doNextTuple(String URLWithScheme) {
+		logger.debug("Calculating relatedness for [{}]", URLWithScheme);
+		String URL = URLWithScheme.split("//")[1];
+		AckResult ackRes = new AckResult();
+		ackRes.URL = URL;
+		ackIndex.put(URL+"~"+counter.toString(), ackRes);
+		calculateRDurl(URL, ackRes);
+		calculateREMurl(URL, ackRes);
+		ackRes.setAllsent(true);
 	}
 
 	void calculateRDurl(String URL, AckResult ackRes) {
