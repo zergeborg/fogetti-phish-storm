@@ -327,7 +327,7 @@ public class URLSpout extends BaseRichSpout {
 		String msg = (String)msgId;
 		String suffix = StringUtils.substringAfter(msg, "~");
 		logger.debug("Message [msg={}] failed", msg);
-		String prefix = StringUtils.substringAfter(suffix, "~");
+		String prefix = "http://"+StringUtils.substringBefore(suffix, "~");
 		logger.warn("Requeueing [msg={}]", prefix);
 		iterator.add(prefix);
 	}
