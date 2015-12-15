@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
@@ -81,6 +82,7 @@ public class BingSemBolt extends AbstractRedisBolt {
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
 		JedisCommands jedisCommand = null;
 		try {
+			TimeUnit.MILLISECONDS.sleep(500);
 			String segment = input.getStringByField("segment");
 			String url = input.getStringByField("url");
 			
@@ -98,6 +100,9 @@ public class BingSemBolt extends AbstractRedisBolt {
 			collector.ack(input);
 		} catch (IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage e) {
 			logger.error("Bing Keyword Stats request failed", e);
+		} catch (InterruptedException e) {
+			logger.warn("Interrupted while sleeping");
+			Thread.currentThread().interrupt();
 		} finally {
 			returnInstance(jedisCommand);
 		}
