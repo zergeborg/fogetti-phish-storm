@@ -69,7 +69,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		String url = input.getStringByField("url");
 		JedisCommands jedisCommand = null;
 		try {
-			TimeUnit.MILLISECONDS.sleep(200);
+			TimeUnit.MILLISECONDS.sleep(1000);
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
 
 			jedisCommand = getInstance();

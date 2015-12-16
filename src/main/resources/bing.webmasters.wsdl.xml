@@ -3402,7 +3402,7 @@
 	</wsdl:binding>
 	<wsdl:service name="WebmasterApi">
 		<wsdl:port binding="tns:BasicHttpBinding_IWebmasterApi" name="BasicHttpBinding_IWebmasterApi">
-			<soap:address location="https://www.bing.com/webmaster/api.svc/soap?apikey=4714d72b1d284851a2bfe81771964d7b"/>
+			<soap:address location="https://www.bing.com/webmaster/api.svc/soap?apikey=42f78bc7613d4437b00c7dd3e600bafb"/>
 		</wsdl:port>
 	</wsdl:service>
 </wsdl:definitions>
