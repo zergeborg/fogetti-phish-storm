@@ -13,3 +13,6 @@ nimbus.host: "dimebag"
 
 supervisor.slots.ports:
     - 6700
+    - 6701
+
+supervisor.worker.timeout.secs: 5

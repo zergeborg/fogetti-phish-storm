@@ -82,7 +82,7 @@ public class BingSemBolt extends AbstractRedisBolt {
 	public void execute(Tuple input, XMLGregorianCalendar startDate, XMLGregorianCalendar endDate) {
 		JedisCommands jedisCommand = null;
 		try {
-			TimeUnit.MILLISECONDS.sleep(200);
+			TimeUnit.MILLISECONDS.sleep(1000);
 			String segment = input.getStringByField("segment");
 			String url = input.getStringByField("url");
 			
