@@ -39,12 +39,12 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword, poolConfig), 2)
+		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword, poolConfig), 1)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(2);
-		builder.setBolt("bingrelatedkeywords", new BingSemBolt(poolConfig), 2)
+			.setNumTasks(1);
+		builder.setBolt("bingrelatedkeywords", new BingSemBolt(poolConfig), 1)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(2);
+			.setNumTasks(1);
 		builder.setBolt("intersection", intersectionBolt(poolConfig))
 			.globalGrouping("googletrends")
 			.globalGrouping("bingrelatedkeywords");

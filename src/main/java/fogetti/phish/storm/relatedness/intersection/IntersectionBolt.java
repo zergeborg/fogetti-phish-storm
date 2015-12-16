@@ -52,7 +52,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		save(segment, termset);
 		String url = input.getStringByField("url");
 		updateSegmentIndex(termset, segment, url);
-		logger.info("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
+		logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
 		collector.ack(input);
 	}
 

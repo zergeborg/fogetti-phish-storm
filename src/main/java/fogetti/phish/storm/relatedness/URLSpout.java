@@ -306,7 +306,7 @@ public class URLSpout extends BaseRichSpout {
 			AckResult result = ackIndex.get(suffix);
 			if (result != null) {
 				String pop = result.pop();
-				logger.debug("Acking [pop={}]", pop);
+				logger.info("Acking [pop={}]", pop);
 				if (result.finished()) {
 					ObjectMapper mapper = new ObjectMapper();
 					String msg = mapper.writeValueAsString(result);
