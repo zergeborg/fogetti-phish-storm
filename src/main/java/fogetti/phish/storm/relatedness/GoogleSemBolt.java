@@ -69,7 +69,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		String url = input.getStringByField("url");
 		JedisCommands jedisCommand = null;
 		try {
-			TimeUnit.MILLISECONDS.sleep(500);
+			TimeUnit.MILLISECONDS.sleep(200);
 			GoogleTrendsRequest request = new GoogleTrendsRequest(segment);
 
 			jedisCommand = getInstance();
@@ -80,7 +80,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 				lookupValue = calculateSearches(csvresult);
 				logger.trace("Result [{}]", csvresult);
 			} else {
-				logger.debug("Found cached Google result found for [segment={}]", segment);
+				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
 			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, url));
 			collector.ack(input);
