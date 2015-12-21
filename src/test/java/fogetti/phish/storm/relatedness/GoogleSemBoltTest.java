@@ -10,14 +10,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
-import java.util.Scanner;
 import java.util.Set;
 
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.freaknet.gtrends.api.GoogleAuthenticator;
 import org.freaknet.gtrends.api.GoogleTrendsClient;
 import org.freaknet.gtrends.api.exceptions.GoogleTrendsClientException;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import backtype.storm.task.OutputCollector;
@@ -174,19 +177,17 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 		verify(spy, atLeast(1)).ack(input);
 	}
 
-	@Ignore
 	@Test
 	public void integration() throws Exception {
 		// Given we want to query Google Related data
-		Scanner console = new Scanner(System.in);
-		String uname = "";
-		if (console.hasNext())
-			uname = console.next();
-		String pword = "";
-		if (console.hasNext())
-			pword = console.next();
-		console.close();
-		GoogleSemBolt bolt = new GoogleSemBolt(uname, pword, null);
+	    BasicCookieStore cookieStore = new BasicCookieStore();
+	    HttpClient httpClient = HttpClientBuilder.create()
+	    	.setDefaultCookieStore(cookieStore)
+            .setRedirectStrategy(new LaxRedirectStrategy()).build();
+	    GoogleAuthenticator authenticator = new GoogleAuthenticator("", "", httpClient);
+		GoogleTrendsClient client = new GoogleTrendsClient(authenticator, httpClient);
+		JedisPoolConfig config = mock(JedisPoolConfig.class);
+		GoogleSemBolt bolt = new SpyingGoogleSemBolt(client, config);
 
 		// When the bolt receives a new tuple
 		Tuple input = mock(Tuple.class);

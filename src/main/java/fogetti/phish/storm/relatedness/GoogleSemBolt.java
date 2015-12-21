@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
@@ -76,6 +77,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			Set<String> lookupValue = jedisCommand.smembers(segment);
 			if (lookupValue == null || lookupValue.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
+				HttpHost proxy = new HttpHost("222.45.196.46", 8118, "http");
 				String csvresult = client.execute(request);
 				lookupValue = calculateSearches(csvresult);
 				logger.trace("Result [{}]", csvresult);
