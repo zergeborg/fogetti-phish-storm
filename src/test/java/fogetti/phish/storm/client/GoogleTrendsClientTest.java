@@ -143,7 +143,7 @@ public class GoogleTrendsClientTest {
     @Test
     public void ordinaryTopSearches() throws Exception {
         GoogleTrends.Builder builder
-        = new GoogleTrends.Builder(new ResponseRequest("ordinary-top-searches.html"), new HttpHost("myproxy", 80), "valami");
+            = new GoogleTrends.Builder(new ResponseRequest("ordinary-top-searches.html"), new HttpHost("myproxy", 80), "valami");
         GoogleTrends client = builder.build();
         Set<String> topSearches = client.topSearches();
         assertNotEquals("There were no top searches", 0, topSearches.size());
@@ -189,7 +189,7 @@ public class GoogleTrendsClientTest {
         private final String contentStr;
         
         public ResponseRequest(String file) throws IOException, URISyntaxException {
-            URL resource = this.getClass().getResource(file);
+            URL resource = GoogleTrendsClientTest.class.getResource(file);
             this.contentStr = new String(Files.readAllBytes(Paths.get(new File(resource.toURI()).getAbsolutePath())));
         }
         
