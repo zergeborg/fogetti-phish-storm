@@ -189,10 +189,7 @@ public class GoogleTrendsClientTest {
         private final String contentStr;
         
         public ResponseRequest(String file) throws IOException, URISyntaxException {
-            URL resource = GoogleTrendsClientTest.class.getResource(file);
-            System.out.println(resource);
-            System.out.println(resource.toURI());
-            System.out.println(new File(resource.toURI()).getAbsolutePath());
+            URL resource = this.getClass().getClassLoader().getResource(file);
             this.contentStr = new String(Files.readAllBytes(Paths.get(new File(resource.toURI()).getAbsolutePath())));
         }
         

@@ -3,5 +3,5 @@
 /.settings/
 /.classpath
 /.project
-/logs
-/logs/*
+logs
+.DS_Store
