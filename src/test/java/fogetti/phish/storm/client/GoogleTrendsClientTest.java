@@ -8,21 +8,17 @@ import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Set;
 
 import org.apache.http.HttpHost;
-import org.apache.http.client.fluent.Content;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -81,9 +77,24 @@ public class GoogleTrendsClientTest {
         }
     }
     
-    @Ignore
     @Test
     public void requestTimeout() throws Exception {
+        // org.apache.http.conn.ConnectTimeoutException: Connect
+        GoogleTrends.Builder builder
+            = new GoogleTrends.Builder(new ErrorThrowingRequest(new ConnectTimeoutException()), new HttpHost("myproxy", 80), "apache");
+        GoogleTrends client = builder.build();
+        try {
+            client.topSearches();
+            fail("The top searches should have failed with a connect timeout exception");
+        } catch(ConnectTimeoutException e) {
+            // Nothing to see here folks
+        }
+        try {
+            client.risingSearches();
+            fail("The rising searches should have failed with a connect timeout exception");
+        } catch(ConnectTimeoutException e) {
+            // Nothing to see here folks
+        }
     }
     
     @Test
@@ -182,30 +193,9 @@ public class GoogleTrendsClientTest {
             when(request.execute()).thenThrow(t);
             return request;
         }
-    }
-    
-    private static class ResponseRequest implements IRequest {
-        
-        private final String contentStr;
-        
-        public ResponseRequest(String file) throws IOException, URISyntaxException {
-            URL resource = this.getClass().getClassLoader().getResource(file);
-            this.contentStr = new String(Files.readAllBytes(Paths.get(new File(resource.toURI()).getAbsolutePath())));
-        }
-        
+
         @Override
-        public Request Get(String query) throws IOException {
-            Request request = mock(Request.class);
-            Response response = mock(Response.class);
-            Content content = mock(Content.class);
-            when(request.viaProxy((HttpHost)anyObject())).thenReturn(request);
-            when(request.connectTimeout(anyInt())).thenReturn(request);
-            when(request.socketTimeout(anyInt())).thenReturn(request);
-            when(request.execute()).thenReturn(response);
-            when(response.returnContent()).thenReturn(content);
-            when(content.asString()).thenReturn(contentStr);
-            return request;
-        }        
+        public Response execute() throws ClientProtocolException, IOException { return null; }
     }
 
 }

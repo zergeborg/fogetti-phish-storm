@@ -1,5 +1,6 @@
 package fogetti.phish.storm.integration;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,8 +9,8 @@ import org.apache.storm.redis.common.config.JedisPoolConfig;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
+import fogetti.phish.storm.client.TrendRequest;
 import fogetti.phish.storm.relatedness.AckResult;
-import fogetti.phish.storm.relatedness.BingSemBolt;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
@@ -22,12 +23,11 @@ public class PhishTopologyBuilder {
 		String countDataFile = System.getProperty("count.data.file");
 		String psDataFile = System.getProperty("ps.data.file");
 		String urlDataFile = System.getProperty("url.data.file");
-		String uname = System.getProperty("uname");
-		String pword = System.getProperty("pword");
-		return build(countDataFile, psDataFile, urlDataFile, uname, pword, "petrucci", 6379, "Macska12");
+		String proxyDataFile = System.getProperty("proxy.data.file");
+		return build(countDataFile, psDataFile, urlDataFile, proxyDataFile, "petrucci", 6379, "Macska12");
 	}
 
-	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String uname, String pword, String redishost, Integer redisport, String redispword) throws Exception {
+	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String proxyDataFile, String redishost, Integer redisport, String redispword) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
 		Map<String, AckResult> ackIndex = new HashMap<>();
 
@@ -39,15 +39,11 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(uname, pword, poolConfig), 1)
-			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(1);
-		builder.setBolt("bingrelatedkeywords", new BingSemBolt(poolConfig), 1)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new TrendRequest()), 1)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
 			.setNumTasks(1);
 		builder.setBolt("intersection", intersectionBolt(poolConfig))
-			.globalGrouping("googletrends")
-			.globalGrouping("bingrelatedkeywords");
+			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}

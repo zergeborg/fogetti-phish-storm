@@ -7,32 +7,33 @@ import java.net.URL;
 import java.util.HashSet;
 
 import org.apache.commons.io.FileUtils;
-import org.freaknet.gtrends.api.GoogleTrendsCsvParser;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class GoogleBoltTest {
 	
-	protected HashSet<String> readSearchesFromFile() throws Exception {
-		String searchresult = readSearchResult();
+	protected HashSet<String> readTopSearchesFromFile(String file) throws Exception {
+		String searchresult = readSearchResultFrom(file);
 		HashSet<String> result = new HashSet<>();
-		GoogleTrendsCsvParser parser = new GoogleTrendsCsvParser(searchresult);
-		String searches = parser.getSectionAsString("Top searches", false);
-		String[] lines = searches.split("\\r?\\n");
-		for (String line : lines) {
-			result.add(line.split(",")[0]);
-		}
-		searches = parser.getSectionAsString("Rising searches", false);
-		lines = searches.split("\\r?\\n");
-		for (String line : lines) {
-			result.add(line.split(",")[0]);
-		}
+        Document doc = Jsoup.parse(searchresult);
+        Elements mainElem = doc.select(".trends-table-data");
+        if (mainElem.size() > 0) {
+            Element table = mainElem.get(0);
+            for (Element row : table.select("tr")) {
+                Elements tds = row.select("td");
+                result.add(tds.get(0).text());
+            }
+        }
 		return result;
 	}
 
-	protected String readSearchResult() throws URISyntaxException, IOException {
-		URL paypaltxturl = this.getClass().getClassLoader().getResource("google-trends-paypal.txt");
-		File paypaltxt = new File(paypaltxturl.toURI());
-		String searchresult = FileUtils.readFileToString(paypaltxt);
-		return searchresult;
+	protected String readSearchResultFrom(String file) throws URISyntaxException, IOException {
+		URL url = this.getClass().getClassLoader().getResource(file);
+		File txt = new File(url.toURI());
+		String result = FileUtils.readFileToString(txt);
+		return result;
 	}
 
 }
