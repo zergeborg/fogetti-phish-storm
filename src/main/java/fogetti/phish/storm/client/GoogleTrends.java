@@ -84,8 +84,8 @@ public class GoogleTrends {
         private final HttpHost httpHost;
         private final String keyword;
         private final IRequest request;
-        private Integer connectTimeout = 60000;
-        private Integer socketTimeout = 60000;
+        private Integer connectTimeout = 5000;
+        private Integer socketTimeout = 5000;
 
         public Builder(IRequest request, HttpHost httpHost, String keyword) {
             this.request = request;

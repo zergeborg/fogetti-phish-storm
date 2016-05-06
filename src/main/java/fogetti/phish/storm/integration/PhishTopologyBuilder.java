@@ -35,13 +35,13 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource", new URLSpout(countDataFile, psDataFile, urlDataFile, ackIndex, poolConfig), 1)
-			.setMaxSpoutPending(50);
+			.setMaxSpoutPending(250);
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new TrendRequest()), 1)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new TrendRequest()), 5)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(1);
+			.setNumTasks(5);
 		builder.setBolt("intersection", intersectionBolt(poolConfig))
 			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
