@@ -1,11 +1,17 @@
 package fogetti.phish.storm.relatedness.intersection;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fogetti.phish.storm.client.IRequest;
 import orestes.bloomfilter.BloomFilter;
 import orestes.bloomfilter.FilterBuilder;
 
@@ -15,24 +21,33 @@ public class IntersectionResult {
 	/** 25∗120∗4 = 25 md segments * 120 terms from search engine * 4 words in terms */
 	private static final int EXPECTED_ELEMENTS = 12000;
 	
-	private Map<String, Collection<String>> RDTermindex;
-	private Map<String, Collection<String>> REMTermindex;
-	private Map<String, Collection<String>> MLDTermindex;
-	private Map<String, Collection<String>> MLDPSTermindex;
-	private BloomFilter<String> ASrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
-	private BloomFilter<String> RELrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
-	private BloomFilter<String> ASrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
-	private BloomFilter<String> RELrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
+	private final Map<String, Collection<String>> RDTermindex;
+	private final Map<String, Collection<String>> REMTermindex;
+	private final Map<String, Collection<String>> MLDTermindex;
+	private final Map<String, Collection<String>> MLDPSTermindex;
+	private final BloomFilter<String> ASrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
+	private final BloomFilter<String> RELrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
+	private final BloomFilter<String> ASrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
+	private final BloomFilter<String> RELrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
+    private final IRequest alexa;
+    private final String resultUrl;
+    private int connectTimeout = 5000;
+    private int socketTimeout = 5000;
+    private Integer RANKING;
 
 	public IntersectionResult(
 		Map<String, Collection<String>> RDTermindex,
 		Map<String, Collection<String>> REMTermindex,
 		Map<String, Collection<String>> MLDTermindex,
-		Map<String, Collection<String>> MLDPSTermindex) {
+		Map<String, Collection<String>> MLDPSTermindex,
+		IRequest alexa,
+		String resultUrl) {
 		this.RDTermindex = RDTermindex;
 		this.REMTermindex = REMTermindex;
 		this.MLDTermindex = MLDTermindex;
 		this.MLDPSTermindex = MLDPSTermindex;
+        this.alexa = alexa;
+        this.resultUrl = resultUrl;
 	}
 
 	public void init() {
@@ -44,9 +59,11 @@ public class IntersectionResult {
 		initASrd();
 		// Step#4: calculate RELrd
 		initRELrd();
+        // Step#5: calculate RANKING
+		initRanking();
 	}
 
-	private void initASrem() {
+    private void initASrem() {
 		REMTermindex.entrySet().stream().forEach(v -> {
 			v.getValue()
 				.stream()
@@ -99,6 +116,24 @@ public class IntersectionResult {
 		});
 		logger.info("[RELrd={}]", RELrd);
 	}
+
+    private void initRanking() {
+        try {
+            String xml = alexa.Get("http://data.alexa.com/data?cli=10&url="+resultUrl)
+                    .connectTimeout(connectTimeout)
+                    .socketTimeout(socketTimeout)
+                    .execute()
+                    .returnContent()
+                    .asString();
+            Document doc = Jsoup.parse(xml, "", Parser.xmlParser());
+            for (Element e : doc.select("POPULARITY")) {
+                String text = e.attr("TEXT");
+                RANKING = Integer.valueOf(text);
+            }
+        } catch (IOException e) {
+            logger.error("Alexa ranking lookup failed", e);
+        }
+    }
 
 	public Double JRR() {
 		return jaccardIndex(RELrd, RELrem, RELrd, RELrem);
@@ -153,8 +188,7 @@ public class IntersectionResult {
 	}
 	
 	public Integer RANKING() {
-		// FIXME: we should call the Alexa ranking service
-		return -1;
+		return RANKING;
 	}
 
 	private Double jaccardIndex(BloomFilter<String> first,

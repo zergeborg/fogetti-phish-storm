@@ -7,7 +7,7 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 
-public final class TrendRequest implements IRequest, Serializable {
+public final class WrappedRequest implements IRequest, Serializable {
 
     private static final long serialVersionUID = -4330455403672234886L;
 

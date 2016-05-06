@@ -1,5 +1,7 @@
 package fogetti.phish.storm.relatedness;
 
+import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT_PREFIX;
+
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
@@ -87,7 +89,8 @@ public class BingSemBolt extends AbstractRedisBolt {
 			String url = input.getStringByField("url");
 			
 	        jedisCommand = getInstance();
-            Set<String> lookupValue = jedisCommand.smembers(segment);
+            String key = REDIS_SEGMENT_PREFIX + segment;
+            Set<String> lookupValue = jedisCommand.smembers(key);
             if (lookupValue == null || lookupValue.isEmpty()) {
             	logger.debug("Cached Bing result not found for [segment={}]", segment);
             	ArrayOfKeyword relatedKeywords = api.getRelatedKeywords(segment, "", "", startDate , endDate);

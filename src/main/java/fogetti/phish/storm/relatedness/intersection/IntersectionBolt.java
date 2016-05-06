@@ -1,5 +1,7 @@
 package fogetti.phish.storm.relatedness.intersection;
 
+import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT_PREFIX;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
@@ -17,6 +19,7 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
+import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
@@ -60,8 +63,10 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		JedisCommands jedis = null;
 		try {
 	        jedis = getInstance();
-	        if (!jedis.exists(segment) && !termset.isEmpty())
-	        	jedis.sadd(segment, termset.toArray(new String[termset.size()]));
+	        if (!jedis.exists(segment) && !termset.isEmpty()) {
+	            String key = REDIS_SEGMENT_PREFIX + segment;
+	        	jedis.sadd(key, termset.toArray(new String[termset.size()]));
+	        }
 		} finally{
 			returnInstance(jedis);
 		}
@@ -104,7 +109,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		Map<String, Collection<String>> RDTermindex = segments.getRDTerms(result);
 		segments.removeIf(termEntry -> REMTermindex.containsKey(termEntry.getKey()));
 		segments.removeIf(termEntry -> RDTermindex.containsKey(termEntry.getKey()));
-		IntersectionResult intersection = new IntersectionResult(RDTermindex,REMTermindex,MLDTermindex,MLDPSTermindex);
+		IntersectionResult intersection = new IntersectionResult(RDTermindex,REMTermindex,MLDTermindex,MLDPSTermindex, new WrappedRequest(), result.URL);
 		intersection.init();
 		return intersection;
 	}

@@ -26,7 +26,7 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.ResponseRequest;
-import fogetti.phish.storm.client.TrendRequest;
+import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.SpyingGoogleSemBolt.Builder;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
@@ -159,7 +159,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
     @Test
     public void integration() throws Exception {
         // Given we want to query Google Related data
-        GoogleSemBolt bolt = new GoogleSemBolt(null, null, new TrendRequest());
+        GoogleSemBolt bolt = new GoogleSemBolt(null, null, new WrappedRequest());
 
         // When the bolt receives a new tuple
         Tuple input = mock(Tuple.class);

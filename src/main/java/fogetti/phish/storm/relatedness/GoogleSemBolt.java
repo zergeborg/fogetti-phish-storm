@@ -1,5 +1,7 @@
 package fogetti.phish.storm.relatedness;
 
+import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT_PREFIX;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -65,7 +67,8 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			TimeUnit.MILLISECONDS.sleep(1000);
 
 			jedisCommand = getInstance();
-			Set<String> lookupValue = jedisCommand.smembers(segment);
+			String key = REDIS_SEGMENT_PREFIX + segment;
+			Set<String> lookupValue = jedisCommand.smembers(key);
 			if (lookupValue == null || lookupValue.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				lookupValue = calculateSearches(segment);

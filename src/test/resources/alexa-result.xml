@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Need more Alexa data?  Find our APIs here: https://aws.amazon.com/alexa/ -->
+<ALEXA VER="0.9" URL="mkyong.com/" HOME="0" AID="=" IDN="mkyong.com/">
+	<SD>
+		<POPULARITY URL="mkyong.com/" TEXT="6845" SOURCE="panel"/>
+		<REACH RANK="5087"/>
+		<RANK DELTA="-402"/>
+		<COUNTRY CODE="IN" NAME="India" RANK="1884"/>
+	</SD>
+</ALEXA>

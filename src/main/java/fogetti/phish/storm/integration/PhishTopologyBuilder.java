@@ -9,7 +9,7 @@ import org.apache.storm.redis.common.config.JedisPoolConfig;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
-import fogetti.phish.storm.client.TrendRequest;
+import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.AckResult;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
@@ -19,6 +19,8 @@ import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 
 public class PhishTopologyBuilder {
 
+    public static final String REDIS_SEGMENT_PREFIX = "segment:"; 
+    
 	public static StormTopology build() throws Exception {
 		String countDataFile = System.getProperty("count.data.file");
 		String psDataFile = System.getProperty("ps.data.file");
@@ -39,7 +41,7 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new TrendRequest()), 5)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 5)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
 			.setNumTasks(5);
 		builder.setBolt("intersection", intersectionBolt(poolConfig))
