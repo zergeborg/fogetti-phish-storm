@@ -41,9 +41,9 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 5)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 8)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(5);
+			.setNumTasks(32);
 		builder.setBolt("intersection", intersectionBolt(poolConfig))
 			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
