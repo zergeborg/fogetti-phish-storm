@@ -11,6 +11,7 @@ import org.junit.Test;
 @Ignore
 public class CSVReaderTest {
 
+    @Ignore
 	@Test
 	public void readCsvStream() throws Exception {
 		// Given
@@ -23,6 +24,19 @@ public class CSVReaderTest {
 		// Then
 		csvReader.writeUrls();
 	}
+	
+	@Test
+    public void testName() throws Exception {
+        // Given
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2015-12-09/phishing-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2015-12-09/random-urls.csv");
+	    
+        // When
+        CSVReader csvReader = new CSVReader(source, target);
+
+        // Then
+        csvReader.writeRandomUrls(21970);
+    }
 	
 	@Ignore
 	@Test

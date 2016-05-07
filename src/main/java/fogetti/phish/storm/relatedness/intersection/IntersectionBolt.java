@@ -2,8 +2,14 @@ package fogetti.phish.storm.relatedness.intersection;
 
 import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT_PREFIX;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,12 +37,14 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
 	private final IntersectionAction intersectionAction;
-	private JedisPoolConfig config;
+	private final JedisPoolConfig config;
+    private final File resultDataFile;
 	
-	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config) {
+	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
 		super(config);
 		this.intersectionAction = intersectionAction;
 		this.config = config;
+        this.resultDataFile = new File(resultDataFile);
 	}
 
 	@Override
@@ -94,6 +102,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 			AckResult result = mapper.readValue(message, AckResult.class);
 			IntersectionResult intersection = initIntersectionResult(result);
 			logIntersectionResult(intersection);
+			saveIntersectionResult(intersection);
 			intersectionAction.run();
 			logger.info("Message [{}] intersected", message);
 		} catch (IOException e) {
@@ -101,7 +110,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		}
 	}
 
-	private IntersectionResult initIntersectionResult(AckResult result) {
+    private IntersectionResult initIntersectionResult(AckResult result) {
 		URLSegments segments = segmentindex.get(result.URL);
 		Map<String, Collection<String>> MLDTermindex = segments.getMLDTerms(result);
 		Map<String, Collection<String>> MLDPSTermindex = segments.getMLDPSTerms(result);
@@ -140,5 +149,39 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 					intersection.MLDPSRES(),
 					intersection.RANKING());
 	}
+
+    private void saveIntersectionResult(IntersectionResult intersection) {
+        List<String> lines = Arrays.asList(new String[] {
+                String.format(
+                "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d,"
+                + "%d",
+                intersection.JRR(),
+                intersection.JRA(),
+                intersection.JAA(),
+                intersection.JAR(),
+                intersection.JARRD(),
+                intersection.JARREM(),
+                intersection.CARDREM(),
+                intersection.RATIOAREM(),
+                intersection.RATIORREM(),
+                intersection.MLDRES(),
+                intersection.MLDPSRES(),
+                intersection.RANKING())});
+        try {
+            Files.write(resultDataFile.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+        } catch (IOException e) {
+            logger.error("Writing the result failed", e);
+        }
+    }
 
 }

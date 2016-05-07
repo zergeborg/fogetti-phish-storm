@@ -18,8 +18,8 @@ import orestes.bloomfilter.FilterBuilder;
 public class IntersectionResult {
 
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionResult.class);
-	/** 25∗120∗4 = 25 md segments * 120 terms from search engine * 4 words in terms */
-	private static final int EXPECTED_ELEMENTS = 12000;
+	/** 25∗20∗3 = 25 md segments * 20 terms from search engine * 3 words in terms */
+	private static final int EXPECTED_ELEMENTS = 1500;
 	
 	private final Map<String, Collection<String>> RDTermindex;
 	private final Map<String, Collection<String>> REMTermindex;
@@ -75,7 +75,7 @@ public class IntersectionResult {
 					}
 			});
 		});
-		logger.info("[ASrem={}]", ASrem);
+		logger.debug("[ASrem={}]", ASrem);
 	}
 
 	private void initRELrem() {
@@ -87,7 +87,7 @@ public class IntersectionResult {
 				}
 			});
 		});
-		logger.info("[RELrem={}]", RELrem);
+		logger.debug("[RELrem={}]", RELrem);
 	}
 
 	private void initASrd() {
@@ -102,7 +102,7 @@ public class IntersectionResult {
 					}
 			});
 		});
-		logger.info("[ASrd={}]", ASrd);
+		logger.debug("[ASrd={}]", ASrd);
 	}
 
 	private void initRELrd() {
@@ -114,7 +114,7 @@ public class IntersectionResult {
 				}
 			});
 		});
-		logger.info("[RELrd={}]", RELrd);
+		logger.debug("[RELrd={}]", RELrd);
 	}
 
     private void initRanking() {
@@ -200,8 +200,8 @@ public class IntersectionResult {
 		BloomFilter<String> thirdclone = third.clone();
 		BloomFilter<String> fourthclone = fourth.clone();
 		if (firstclone.intersect(secondclone) && thirdclone.intersect(fourthclone)) {
-			Double firstPopulation = firstclone.getEstimatedPopulation().equals(-0.0) ? 0.0 : firstclone.getEstimatedPopulation();
-			Double thirdPopulation = thirdclone.getEstimatedPopulation().equals(-0.0) ? 1.0 : thirdclone.getEstimatedPopulation();
+			Double firstPopulation = firstclone.getEstimatedPopulation();
+			Double thirdPopulation = thirdclone.getEstimatedPopulation();
 			return firstPopulation / thirdPopulation;
 		}
 		return null;

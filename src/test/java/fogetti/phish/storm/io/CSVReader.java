@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -51,5 +53,24 @@ public class CSVReader {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
-	}  
+	}
+
+    public void writeRandomUrls(int seed) {
+        Random rnd = new Random();
+        try (BufferedReader reader = Files.newBufferedReader(source)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(target)) {
+                List<String> result = new ArrayList<>();
+                List<String> lines = new ArrayList<>(reader.lines().collect(Collectors.toList()));
+                while(result.size() < seed){
+                    int randPos = rnd.nextInt(lines.size());
+                    result.add(lines.get(randPos));
+                }
+                for (String res : result) {
+                    writer.write(res+"\n");
+                }
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }  
 }

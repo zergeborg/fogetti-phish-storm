@@ -26,10 +26,19 @@ public class PhishTopologyBuilder {
 		String psDataFile = System.getProperty("ps.data.file");
 		String urlDataFile = System.getProperty("url.data.file");
 		String proxyDataFile = System.getProperty("proxy.data.file");
-		return build(countDataFile, psDataFile, urlDataFile, proxyDataFile, "petrucci", 6379, "Macska12");
+		String resultDataFile = System.getProperty("result.data.file");
+		return build(countDataFile, psDataFile, urlDataFile, proxyDataFile, resultDataFile, "petrucci", 6379, "Macska12");
 	}
 
-	public static StormTopology build(String countDataFile, String psDataFile, String urlDataFile, String proxyDataFile, String redishost, Integer redisport, String redispword) throws Exception {
+	public static StormTopology build(
+	        String countDataFile,
+	        String psDataFile,
+	        String urlDataFile,
+	        String proxyDataFile,
+	        String resultDataFile,
+	        String redishost,
+	        Integer redisport,
+	        String redispword) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
 		Map<String, AckResult> ackIndex = new HashMap<>();
 
@@ -41,18 +50,18 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 4)
 			.fieldsGrouping("urlsource", new Fields("word", "url"))
 			.setNumTasks(2);
-		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 8)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(32);
-		builder.setBolt("intersection", intersectionBolt(poolConfig))
+			.setNumTasks(64);
+		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
 			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}
 
-	private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig) throws Exception {
+	private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
 		IntersectionAction action = new IntersectionAction() { private static final long serialVersionUID = 5105509799523060930L; @Override public void run() {} };
-		IntersectionBolt callback = new IntersectionBolt(action, poolConfig);
+		IntersectionBolt callback = new IntersectionBolt(action, poolConfig, resultDataFile);
 		return callback;
 	}
 

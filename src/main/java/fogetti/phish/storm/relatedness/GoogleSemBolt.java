@@ -85,7 +85,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			logger.warn("Interrupted while sleeping");
 			Thread.currentThread().interrupt();
 		} catch (IOException e) {
-            logger.error("Google Trend request failed", e);
+            logger.error("Google Trend request failed", e.getMessage());
         } finally {
 			returnInstance(jedisCommand);
 		}

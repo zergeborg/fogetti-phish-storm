@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,13 +24,14 @@ public class IntersectionBoltTest {
 	
 	private String paypal;
 	private JedisCommands jedis;
+    private String resultDataFile;
 	
 	private class TestDoubleIntersectionBolt extends IntersectionBolt {
 
 		private static final long serialVersionUID = 740985698253429447L;
 
-		public TestDoubleIntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config) {
-			super(intersectionAction, config);
+		public TestDoubleIntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
+			super(intersectionAction, config, resultDataFile);
 		}
 		
 	    @Override
@@ -46,13 +48,15 @@ public class IntersectionBoltTest {
 	public void setup() throws Exception {
 		paypal = "paypal";
 		jedis = mock(JedisCommands.class);
+		String absolutePath = new File(this.getClass().getResource(".").toURI()).getAbsolutePath();
+        resultDataFile = absolutePath + File.separator + "phishing-result.csv";
 	}
 
 	@Test(expected = JedisException.class)
 	public void redisRequestFails() throws Exception {
 		// Given we want to get related words for a keyword
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
-		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config);
+		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
 		when(keyword.getStringByField("segment")).thenReturn(paypal);
 
@@ -67,7 +71,7 @@ public class IntersectionBoltTest {
 	public void cachedSegmentFound() throws Exception {
 		// Given we want to get related words for a keyword
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
-		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config);
+		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
 		when(keyword.getStringByField("segment")).thenReturn(paypal);
 		when(keyword.getStringByField("url")).thenReturn("http://google.com");
@@ -90,7 +94,7 @@ public class IntersectionBoltTest {
 	public void cachedSegmentNotFound() throws Exception {
 		// Given we want to get related words for a keyword
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
-		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config);
+		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
 		when(keyword.getStringByField("segment")).thenReturn(paypal);
 		HashSet<String> termset = new HashSet<String>();
@@ -114,7 +118,7 @@ public class IntersectionBoltTest {
 	public void receivesEmptySet() throws Exception {
 		// Given we want to compute intersections
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
-		IntersectionBolt iBolt = new TestDoubleIntersectionBolt(null, config);
+		IntersectionBolt iBolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 
 		Tuple input = mock(Tuple.class);
 		when(input.getValue(0)).thenReturn(new HashSet<String>());
