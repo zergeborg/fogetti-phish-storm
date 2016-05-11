@@ -153,15 +153,15 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
     private void saveIntersectionResult(IntersectionResult intersection) {
         List<String> lines = Arrays.asList(new String[] {
                 String.format(
-                "%d,"
+                "%f,"
+                + "%f,"
+                + "%f,"
+                + "%f,"
+                + "%f,"
+                + "%f,"
                 + "%d,"
-                + "%d,"
-                + "%d,"
-                + "%d,"
-                + "%d,"
-                + "%d,"
-                + "%d,"
-                + "%d,"
+                + "%f,"
+                + "%f,"
                 + "%d,"
                 + "%d,"
                 + "%d",
