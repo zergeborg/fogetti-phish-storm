@@ -313,6 +313,8 @@ public class URLSpout extends BaseRichSpout {
 					publish("phish", msg);
 					ackIndex.remove(suffix);
 					return;
+				} else {
+			        logger.debug("AckResults are not yet available in {}", result);
 				}
 			}
 		} catch (JsonProcessingException e) {

@@ -101,6 +101,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		GoogleTrends client = builder.build();
 		result.addAll(client.topSearches());
 		result.addAll(client.risingSearches());
+        logger.debug("Google Trend request succeeded");
 		return result;
 	}
 

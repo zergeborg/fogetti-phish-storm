@@ -1,6 +1,8 @@
 package fogetti.phish.storm.relatedness;
 
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -8,9 +10,17 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class AckResult implements Serializable {
 
 	private static final long serialVersionUID = 3990008783759688342L;
+    private static final Logger logger = LoggerFactory.getLogger(AckResult.class);
+    private final ObjectMapper mapper = new ObjectMapper();
 	public boolean allsent;
 	public String MLD;
 	public String MLDPS;
@@ -94,6 +104,7 @@ public class AckResult implements Serializable {
 	}
 	
 	public void setAllsent(boolean allsent) {
+	    logger.info("All segments sent in {}", this);
 		this.allsent = allsent;
 	}
 
@@ -135,5 +146,19 @@ public class AckResult implements Serializable {
 			.filter(termEntry -> MLDPS.equals(termEntry.getKey()))
 			.collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
 		return RDTermindex;
+	}
+	
+	@Override
+    public String toString() {
+	    String msg = "";
+        try {
+            msg = mapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            msg = pw.toString();
+        }
+	    return msg;
 	}
 }
