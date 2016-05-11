@@ -33,12 +33,9 @@ public class JedisListener implements Runnable {
 		while (!Thread.currentThread().isInterrupted()) {
 			try (Jedis jedis = (Jedis) container.getInstance()) {
 				List<String> messages = jedis.blpop(0, new String[]{channel});
+				logger.info("Jedis message arrived {}", messages.get(1));
 				try {
-				    String msgs = mapper.writeValueAsString(messages);
-				    logger.info("Jedis message arrived {}", msgs);
-	                for (String msg : messages) {
-	                    callback.onMessage(channel, msg);
-	                }
+                    callback.onMessage(channel, messages.get(1));
                 } catch (Exception e) {
                     logger.error("Sending intersection callback failed", e);
                 }
