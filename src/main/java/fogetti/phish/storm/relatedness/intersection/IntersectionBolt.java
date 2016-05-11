@@ -178,7 +178,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 intersection.MLDPSRES(),
                 intersection.RANKING())});
         try {
-            Files.write(resultDataFile.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            Files.write(resultDataFile.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         } catch (IOException e) {
             logger.error("Writing the result failed", e);
         }
