@@ -29,7 +29,7 @@ public class JedisListener implements Runnable {
 	    logger.info("Subscribing");
 		while (!Thread.currentThread().isInterrupted()) {
 			try (Jedis jedis = (Jedis) container.getInstance()) {
-				List<String> messages = jedis.blpop(new String[]{channel});
+				List<String> messages = jedis.blpop(0, new String[]{channel});
 				for (String msg : messages) {
 			        callback.onMessage(channel, msg);
                 }
