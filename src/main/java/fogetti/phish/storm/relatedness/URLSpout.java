@@ -328,7 +328,7 @@ public class URLSpout extends BaseRichSpout {
 			jedis = (Jedis) getInstance();
 			PublishMessage message = new PublishMessage(channel, msg);
 			logger.info("Publishing [Message={}]", message.msg);
-			jedis.publish(message.channel, message.msg);
+			jedis.rpush(message.channel, message.msg);
 		} finally {
 			returnInstance(jedis);
 		}

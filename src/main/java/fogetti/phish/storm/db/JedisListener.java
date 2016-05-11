@@ -1,5 +1,7 @@
 package fogetti.phish.storm.db;
 
+import java.util.List;
+
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
 import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
@@ -7,9 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPubSub;
 
-public class JedisListener extends JedisPubSub implements Runnable {
+public class JedisListener implements Runnable {
 
 	private static final Logger logger = LoggerFactory.getLogger(JedisListener.class);
 
@@ -24,16 +25,14 @@ public class JedisListener extends JedisPubSub implements Runnable {
 	}
 	
 	@Override
-	public void onMessage(String channel, String message) {
-		callback.onMessage(channel, message);
-	}
-
-	@Override
 	public void run() {
+	    logger.info("Subscribing");
 		while (!Thread.currentThread().isInterrupted()) {
 			try (Jedis jedis = (Jedis) container.getInstance()) {
-				logger.info("Subscribing");
-				jedis.subscribe(this, channel);
+				List<String> messages = jedis.blpop(new String[]{channel});
+				for (String msg : messages) {
+			        callback.onMessage(channel, msg);
+                }
 			} catch (Exception e) {
 				logger.error("Subscribing to Redis failed - {}", e.getMessage());
 				Thread.currentThread().interrupt();
