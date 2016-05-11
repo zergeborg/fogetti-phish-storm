@@ -10,7 +10,7 @@ public class PhishTopologyRemoteRunner {
 		StormTopology topology = PhishTopologyBuilder.build();
 		
 		Config config = new Config();
-		config.setNumWorkers(2);
+		config.setNumWorkers(10);
 		config.setMessageTimeoutSecs(30);
 		
 		StormSubmitter.submitTopology("phish-storm-topology", config, topology);
