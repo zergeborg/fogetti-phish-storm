@@ -13,7 +13,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
@@ -34,11 +33,14 @@ import redis.clients.jedis.JedisCommands;
 
 public class GoogleSemBolt extends AbstractRedisBolt {
 
+    public static final String RETRY_STREAM = "retry";
+    public static final String SUCCESS_STREAM = "success";
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
     private final File proxies;
     private final IRequest request;
     private List<String> proxyList;
+    private long timeout;
 
 	public GoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request) {
 		super(config);
@@ -51,6 +53,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 	@SuppressWarnings("rawtypes")
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		super.prepare(stormConf, context, collector);
+		timeout = (Long)stormConf.get("timeout");
 		try {
             proxyList = Files.readAllLines(proxies.toPath());
         } catch (IOException e) {
@@ -75,13 +78,10 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, url));
+			collector.emit(SUCCESS_STREAM, input, new Values(new HashSet<>(lookupValue), segment, url));
 			collector.ack(input);
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
-            collector.fail(input);
-		} catch (ConfigurationException e) {
-			logger.error("Google Trend request failed", e);
             collector.fail(input);
 		} catch (InterruptedException e) {
 			logger.warn("Interrupted while sleeping");
@@ -89,19 +89,21 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			Thread.currentThread().interrupt();
 		} catch (IOException e) {
             logger.error("Google Trend request failed", e.getMessage());
-            collector.fail(input);
+            collector.emit(RETRY_STREAM, input, new Values(new HashSet<>(), segment, url));
         } finally {
 			returnInstance(jedisCommand);
 		}
 	}
 
-	private Set<String> calculateSearches(String segment) throws ConfigurationException, IOException {
+	private Set<String> calculateSearches(String segment) throws IOException {
 		HashSet<String> result = new HashSet<>();
 		int nextPick = new Random().nextInt(proxyList.size());
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
 		HttpHost httpHost = new HttpHost(hostAndPort[0],Integer.parseInt(hostAndPort[1]));
         Builder builder = new GoogleTrends.Builder(request, httpHost, segment);
+        builder = builder.setConnectTimeout((int)timeout);
+        builder = builder.setSocketTimeout((int)timeout);
 		GoogleTrends client = builder.build();
 		result.addAll(client.topSearches());
 		result.addAll(client.risingSearches());
@@ -123,6 +125,8 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("googletrends", "segment", "url"));
+		// declarer.declare(new Fields("googletrends", "segment", "url"));
+		declarer.declareStream(SUCCESS_STREAM, new Fields("googletrends", "segment", "url"));
+		declarer.declareStream(RETRY_STREAM, new Fields("googletrends", "segment", "url"));
 	}
 }
