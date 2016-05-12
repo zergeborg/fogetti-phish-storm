@@ -111,7 +111,6 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         IRequest request = new ResponseRequest("ordinary-top-searches.html");
         Request innerRequest = request.Get("test");
         SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
-        bolt.prepare(null, null, null);
 
         // When the bolt sends a new query to Google
         Tuple input = mock(Tuple.class);
@@ -119,6 +118,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         when(input.getStringByField("url")).thenReturn("url");
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
+        bolt.prepare(null, null, spy);
         when(innerRequest.execute()).thenThrow(new SocketTimeoutException());
         bolt.execute(input);
 
@@ -127,6 +127,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
         verify(spy, never()).ack(input);
+        verify(spy, atLeast(1)).fail(input);
     }
 
     @Test

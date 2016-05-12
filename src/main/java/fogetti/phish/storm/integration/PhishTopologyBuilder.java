@@ -1,8 +1,6 @@
 package fogetti.phish.storm.integration;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 
@@ -10,8 +8,8 @@ import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 import fogetti.phish.storm.client.WrappedRequest;
-import fogetti.phish.storm.relatedness.AckResult;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
+import fogetti.phish.storm.relatedness.MatcherBolt;
 import fogetti.phish.storm.relatedness.URLBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
 import fogetti.phish.storm.relatedness.intersection.IntersectionAction;
@@ -40,15 +38,17 @@ public class PhishTopologyBuilder {
 	        Integer redisport,
 	        String redispword) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
-		Map<String, AckResult> ackIndex = new HashMap<>();
 
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
-			.setSpout("urlsource", new URLSpout(countDataFile, psDataFile, urlDataFile, ackIndex, poolConfig), 1)
+			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(250);
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 4)
+            .fieldsGrouping("urlsource", new Fields("url"))
+            .setNumTasks(2);
 		builder.setBolt("urlsplit", new URLBolt(), 4)
-			.fieldsGrouping("urlsource", new Fields("word", "url"))
+			.fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(2);
 		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))

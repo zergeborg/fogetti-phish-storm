@@ -2,16 +2,13 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.math.BigInteger;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
 import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
@@ -28,7 +25,6 @@ import backtype.storm.topology.base.BaseRichSpout;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.relatedness.suffix.PublicSuffixMatcher;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 
@@ -45,31 +41,16 @@ public class URLSpout extends BaseRichSpout {
 	private static final long serialVersionUID = -6424905468176142975L;
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 
-	private static class SplitResult {
-		String first;
-		String result;
-	}
-
-	private double N = 1024908267229.;
-	private double itervalues = 0.;
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
 	private ListIterator<String> iterator;
-	private Map<String, List<String>> memomap = new HashMap<>();
-	private Map<String, Long> lookup = new HashMap<>();
-	private Map<String, AckResult> ackIndex;
-	private String countDataFile;
-	private String psDataFile;
 	private String urlDataFile;
-	private BigInteger counter = BigInteger.valueOf(0);
 	private JedisPoolConfig config;
 	private JedisCommandsInstanceContainer container;
+    private ObjectMapper mapper = new ObjectMapper();
 
-	public URLSpout(String countDataFile, String psDataFile, String urlDataFile, Map<String, AckResult> ackIndex, JedisPoolConfig config) {
-		this.countDataFile = countDataFile;
-		this.psDataFile = psDataFile;
+	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
-		this.ackIndex = ackIndex;
 		this.config = config;
 	}
 
@@ -78,7 +59,6 @@ public class URLSpout extends BaseRichSpout {
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
 		this.urllist = readURLListFromFile();
-		this.lookup = readCountFromFile();
 		this.iterator = urllist.listIterator();
 		this.container = JedisCommandsContainerBuilder.build(config);
 	}
@@ -100,40 +80,6 @@ public class URLSpout extends BaseRichSpout {
 		}
 	}
 
-	private PublicSuffixMatcher readPublicSuffixListFromFile() {
-		String location = System.getProperty("ps-location", psDataFile);
-		PublicSuffixMatcher matcher = new PublicSuffixMatcher(location);
-		logger.info("Reading public suffix data from [{}] ...", location);
-		matcher.load();
-		return matcher;
-	}
-
-	private Map<String, Long> readCountFromFile() {
-		HashMap<String, Long> map = new HashMap<>();
-		String location = System.getProperty("count-location", countDataFile);
-		logger.info("Reading n-gram count data from [{}] ...", location);
-		load(map, location);
-		return map;
-	}
-
-	private void load(HashMap<String, Long> map, String location) {
-		try(Scanner scanner = new Scanner(new FileReader(location));) {
-			scan(map, scanner);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void scan(HashMap<String, Long> map, Scanner scanner) {
-		while (scanner.hasNextLine()) {
-			String[] columns = scanner.nextLine().split("\\t");
-			Long value = Long.valueOf(columns[1]);
-			itervalues += value;
-			map.put(columns[0], value);
-		}
-	}
-
 	@Override
 	public void nextTuple() {
 		// Check the case when we read first seen elements
@@ -146,180 +92,39 @@ public class URLSpout extends BaseRichSpout {
 			String URLWithScheme = iterator.previous();
 			doNextTuple(URLWithScheme);
 		}
-		counter = counter.add(BigInteger.valueOf(1));
 	}
 
 	private void doNextTuple(String URLWithScheme) {
-		logger.debug("Calculating relatedness for [{}]", URLWithScheme);
-		String URL = URLWithScheme.split("//")[1];
-		AckResult ackRes = new AckResult();
-		ackRes.URL = URL;
-		ackIndex.put(URL+"~"+counter.toString(), ackRes);
-		calculateRDurl(URL, ackRes);
-		calculateREMurl(URL, ackRes);
-		ackRes.setAllsent(true);
-	}
-
-	void calculateRDurl(String URL, AckResult ackRes) {
-		String mldps = URL.split("/")[0];
-		ackRes.MLDPS = mldps;
-		PublicSuffixMatcher matcher = readPublicSuffixListFromFile();
-		String ps = matcher.findPublicSuffix(mldps);
-		logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
-		ackRes.pushRD(mldps);
-		emit(mldps, URL, "mldps"+mldps);
-		String mld = StringUtils.substringBeforeLast(mldps, "." + ps);
-		ackRes.MLD = mld;
-		ackRes.pushRD(mld);
-		emit(mld, URL, "mld"+mld);
-	}
-
-	private void emit(String word, String URL, String prefix) {
-		logger.debug("Emitting [{}]", prefix);
-		collector.emit(new Values(word, URL), prefix+"~"+URL+"~"+counter.toString());
-	}
-
-	void calculateREMurl(String URL, AckResult ackRes) {
-		String rem = StringUtils.substringAfter(URL, "/");
-		slashes(rem, URL, ackRes);
-	}
-
-	private void slashes(String rem, String URL, AckResult ackRes) {
-		String[] slash = rem.split("/");
-		for (String sl : slash) {
-			questions(sl, URL, ackRes);
-		}
-	}
-
-	private void questions(String sl, String URL, AckResult ackRes) {
-		String[] questions = sl.split("\\?");
-		for (String qu : questions) {
-			dots(qu, URL, ackRes);
-		}
-	}
-
-	private void dots(String qu, String URL, AckResult ackRes) {
-		String[] dots = qu.split("\\.");
-		for (String dot : dots) {
-			equals(dot, URL, ackRes);
-		}
-	}
-
-	private void equals(String dot, String URL, AckResult ackRes) {
-		String[] equals = dot.split("=");
-		for (String eq : equals) {
-			underscores(eq, URL, ackRes);
-		}
-	}
-
-	private void underscores(String eq, String URL, AckResult ackRes) {
-		String[] underscores = eq.split("_");
-		for (String un : underscores) {
-			dashes(un, URL, ackRes);
-		}
-	}
-
-	private void dashes(String un, String URL, AckResult ackRes) {
-		String[] dashes = un.split("-");
-		for (String dash : dashes) {
-			List<String> segments = segment(dash);
-			segments(segments, URL, ackRes);
-		}
-	}
-
-	private void segments(List<String> segments, String URL, AckResult ackRes) {
-		for (String segment : segments) {
-			ackRes.pushREM(segment);
-			emit(segment, URL, segment);
-		}
-	}
-
-	public List<String> segment(String text) {
-		if (StringUtils.isEmpty(text))
-			return Collections.emptyList();
-		if (memomap.containsKey(text)) {
-			return memomap.get(text);
-		} else {
-			List<String> result = findResult(text);
-			memomap.put(text, result);
-			return result;
-		}
-	}
-
-	private List<String> findResult(String text) {
-		List<SplitResult> splitRes = splits(text);
-		List<List<String>> candidates = candidates(splitRes);
-		List<String> result =
-			candidates.stream().max(
-				(List<String> o1, List<String> o2) -> pwords(o1).compareTo(pwords(o2))).get();
-		return result;
-	}
-
-	private List<SplitResult> splits(String text) {
-		List<SplitResult> res = new ArrayList<>();
-		int min = Math.min(text.length(), 20);
-		for (int i = 0; i < min; i++) {
-			SplitResult split = new SplitResult();
-			split.first = StringUtils.substring(text, 0, i+1);
-			split.result = StringUtils.substring(text, i+1);
-			res.add(split);
-		}
-		return res;
-	}
-
-	private List<List<String>> candidates(List<SplitResult> splitRes) {
-		List<List<String>> candidates = new ArrayList<>();
-		for (SplitResult splitResult : splitRes) {
-			List<String> list = new ArrayList<>();
-			list.add(splitResult.first);
-			list.addAll(segment(splitResult.result));
-			candidates.add(list);
-		}
-		return candidates;
-	}
-
-	private Double pwords(List<String> words) {
-		return words.stream().map((w) -> pw(w)).reduce(1.0, (a,b) -> a * b);
-	}
-
-	private double pw(String w) {
-		if (lookup.containsKey(w)) {
-			return lookup.get(w) / itervalues;
-		}
-		return 10./(N * Math.pow(10, w.length()));
+		collector.emit(new Values(URLWithScheme), URLWithScheme);
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declare(new Fields("word", "url"));
+		declarer.declare(new Fields("url"));
 	}
 
 	@Override
 	public void ack(Object msgId) {
-		String m = (String)msgId;
-		String suffix = StringUtils.substringAfter(m, "~");
-		ack(suffix);
-	}
-
-	public void ack(String suffix) {
-		try {
-			AckResult result = ackIndex.get(suffix);
-			if (result != null) {
-				String pop = result.pop();
-				logger.info("Acking [pop={}]", pop);
-				if (result.finished()) {
-					ObjectMapper mapper = new ObjectMapper();
-					String msg = mapper.writeValueAsString(result);
-					publish("phish", msg);
-					ackIndex.remove(suffix);
-					return;
-				} else {
-			        logger.debug("AckResults are not yet available in {}", result);
-				}
-			}
-		} catch (JsonProcessingException e) {
-			logger.error("Could not send acknowledgment to the intersection bolt", e);
-		}
+        Jedis jedis = null;
+        AckResult result = null;
+        try {
+            jedis = (Jedis) getInstance();
+            List<String> messages = jedis.blpop(0, new String[]{"acked:"+msgId.toString()});
+            result = mapper.readValue(messages.get(1), AckResult.class);
+        } catch (IOException e) {
+            logger.error("Could not look up AckResult related to "+msgId.toString(), e);
+            collector.reportError(e);
+            return;
+        } finally {
+            returnInstance(jedis);
+        }
+        try {
+            String msg = mapper.writeValueAsString(result);
+            publish("phish", msg);
+        } catch (JsonProcessingException e) {
+            logger.error("Could not send acknowledgment to the intersection bolt", e);
+            collector.reportError(e);
+        }
 	}
 
 	private void publish(String channel, String msg) {
@@ -336,12 +141,9 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void fail(Object msgId) {
-		String msg = (String)msgId;
-		String suffix = StringUtils.substringAfter(msg, "~");
-		logger.debug("Message [msg={}] failed", msg);
-		String prefix = "http://"+StringUtils.substringBefore(suffix, "~");
-		logger.warn("Requeueing [msg={}]", prefix);
-		iterator.add(prefix);
+		logger.debug("Message [msg={}] failed", msgId);
+		logger.warn("Requeueing [msg={}]", msgId);
+		iterator.add(msgId.toString());
 	}
 
 	/**

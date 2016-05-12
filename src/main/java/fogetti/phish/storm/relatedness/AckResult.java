@@ -108,7 +108,15 @@ public class AckResult implements Serializable {
 		this.allsent = allsent;
 	}
 
-	public Map<String, Collection<String>> getREMTerms(Map<String, Collection<String>> termindex) {
+	public Set<String> getRDurl() {
+        return RDurl;
+    }
+
+    public Set<String> getREMurl() {
+        return REMurl;
+    }
+
+    public Map<String, Collection<String>> getREMTerms(Map<String, Collection<String>> termindex) {
 		Map<String, Collection<String>> REMTermindex = 
 			termindex
 			.entrySet()
