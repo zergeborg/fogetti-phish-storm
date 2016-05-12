@@ -1,5 +1,6 @@
 package fogetti.phish.storm.relatedness;
 
+import static fogetti.phish.storm.relatedness.GoogleSemBolt.SUCCESS_STREAM;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
@@ -12,7 +13,9 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.http.client.fluent.Request;
@@ -75,7 +78,9 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // When we send a request to redis
         when(jedis.smembers(anyString())).thenReturn(segments);
         OutputCollector collector = mock(OutputCollector.class);
-        bolt.prepare(null, null, collector);
+        Map<String, Object> config = new HashMap<>();
+        config.put("timeout", 5000L);
+        bolt.prepare(config, null, collector);
         bolt.execute(keyword);
 
         // Then it returns a cached segment
@@ -95,13 +100,15 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // When we send a request to redis which returns no cached segment
         when(jedis.smembers(anyString())).thenReturn(null);
         OutputCollector collector = mock(OutputCollector.class);
-        bolt.prepare(null, null, collector);
+        Map<String, Object> config = new HashMap<>();
+        config.put("timeout", 5000L);
+        bolt.prepare(config, null, collector);
         bolt.execute(keyword);
 
         // Then we send a request to Google
         verify(keyword, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
-        verify(collector, atLeast(1)).emit((Tuple)anyObject(), anyObject());
+        verify(collector, atLeast(1)).emit(anyString(), (Tuple)anyObject(), anyObject());
         verify(collector).ack(keyword);
     }
 
@@ -118,7 +125,9 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         when(input.getStringByField("url")).thenReturn("url");
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
-        bolt.prepare(null, null, spy);
+        Map<String, Object> config = new HashMap<>();
+        config.put("timeout", 5000L);
+        bolt.prepare(config, null, spy);
         when(innerRequest.execute()).thenThrow(new SocketTimeoutException());
         bolt.execute(input);
 
@@ -127,7 +136,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
         verify(spy, never()).ack(input);
-        verify(spy, atLeast(1)).fail(input);
+        verify(spy, never()).fail(input);
     }
 
     @Test
@@ -138,7 +147,9 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
-        bolt.prepare(null, null, spy);
+        Map<String, Object> config = new HashMap<>();
+        config.put("timeout", 5000L);
+        bolt.prepare(config, null, spy);
 
         // When the bolt sends a new query to Google and succeeds
         Tuple input = mock(Tuple.class);
@@ -152,7 +163,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(innerRequest, atLeast(1)).execute();
         HashSet<String> tops = readTopSearchesFromFile("ordinary-top-searches.html");
         Values topSearches = new Values(tops, paypal, "url");
-        verify(spy, atLeast(1)).emit(input, topSearches);
+        verify(spy, atLeast(1)).emit(SUCCESS_STREAM, input, topSearches);
         verify(spy, atLeast(1)).ack(input);
     }
 
