@@ -7,10 +7,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.tuple.Tuple;
 import org.junit.Test;
-
-import backtype.storm.task.OutputCollector;
-import backtype.storm.tuple.Tuple;
 
 public class URLBoltTest {
 

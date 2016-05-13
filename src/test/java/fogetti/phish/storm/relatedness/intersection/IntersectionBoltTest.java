@@ -12,11 +12,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Test;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
 

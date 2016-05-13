@@ -2,11 +2,11 @@ package fogetti.phish.storm.integration;
 
 import java.io.File;
 
+import org.apache.storm.generated.StormTopology;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.topology.TopologyBuilder;
+import org.apache.storm.tuple.Fields;
 
-import backtype.storm.generated.StormTopology;
-import backtype.storm.topology.TopologyBuilder;
-import backtype.storm.tuple.Fields;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
 import fogetti.phish.storm.relatedness.MatcherBolt;

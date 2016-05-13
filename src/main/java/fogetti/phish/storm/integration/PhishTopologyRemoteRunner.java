@@ -1,8 +1,8 @@
 package fogetti.phish.storm.integration;
 
-import backtype.storm.Config;
-import backtype.storm.StormSubmitter;
-import backtype.storm.generated.StormTopology;
+import org.apache.storm.Config;
+import org.apache.storm.StormSubmitter;
+import org.apache.storm.generated.StormTopology;
 
 public class PhishTopologyRemoteRunner {
 

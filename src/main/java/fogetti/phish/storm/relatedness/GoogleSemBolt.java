@@ -17,15 +17,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.tuple.Fields;
-import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
@@ -125,7 +125,6 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		// declarer.declare(new Fields("googletrends", "segment", "url"));
 		declarer.declareStream(SUCCESS_STREAM, new Fields("googletrends", "segment", "url"));
 		declarer.declareStream(RETRY_STREAM, new Fields("googletrends", "segment", "url"));
 	}

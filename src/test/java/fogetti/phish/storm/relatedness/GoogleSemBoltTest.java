@@ -20,13 +20,13 @@ import java.util.Set;
 
 import org.apache.http.client.fluent.Request;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.ResponseRequest;
 import fogetti.phish.storm.client.WrappedRequest;

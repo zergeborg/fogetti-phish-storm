@@ -119,12 +119,12 @@
     <dependency>
       <groupId>org.apache.storm</groupId>
       <artifactId>storm-core</artifactId>
-      <version>0.10.0</version>
+      <version>1.0.1</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
           <artifactId>kryo</artifactId>
-          <groupId>com.esotericsoftware.kryo</groupId>
+          <groupId>com.esotericsoftware</groupId>
         </exclusion>
         <exclusion>
           <artifactId>clojure</artifactId>
@@ -132,7 +132,7 @@
         </exclusion>
         <exclusion>
           <artifactId>disruptor</artifactId>
-          <groupId>com.googlecode.disruptor</groupId>
+          <groupId>com.lmax</groupId>
         </exclusion>
         <exclusion>
           <artifactId>log4j-api</artifactId>
@@ -149,10 +149,6 @@
         <exclusion>
           <artifactId>log4j-over-slf4j</artifactId>
           <groupId>org.slf4j</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>hadoop-auth</artifactId>
-          <groupId>org.apache.hadoop</groupId>
         </exclusion>
         <exclusion>
           <artifactId>servlet-api</artifactId>
@@ -183,7 +179,7 @@
     </dependency>
   </dependencies>
   <properties>
-    <storm.version>0.10.0</storm.version>
+    <storm.version>1.0.1</storm.version>
   </properties>
 </project>
 

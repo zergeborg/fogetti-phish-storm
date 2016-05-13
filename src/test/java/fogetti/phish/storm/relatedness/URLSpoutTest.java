@@ -14,12 +14,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.spout.SpoutOutputCollector;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import backtype.storm.spout.SpoutOutputCollector;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 

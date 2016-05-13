@@ -19,12 +19,12 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.tuple.Tuple;
 import fogetti.phish.storm.wsdl.bing.webmaster.ArrayOfKeyword;
 import fogetti.phish.storm.wsdl.bing.webmaster.IWebmasterApi;
 import fogetti.phish.storm.wsdl.bing.webmaster.IWebmasterApiGetRelatedKeywordsApiFaultFaultFaultMessage;

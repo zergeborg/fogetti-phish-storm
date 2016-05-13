@@ -1,6 +1,7 @@
 package fogetti.phish.storm.integration;
 
-import backtype.storm.generated.StormTopology;
+import org.apache.storm.generated.StormTopology;
+
 import redis.embedded.RedisServer;
 
 public class TopologyEnd2End {

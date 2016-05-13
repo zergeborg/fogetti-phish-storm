@@ -4,9 +4,9 @@ import java.io.File;
 import java.util.Map;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
 import fogetti.phish.storm.client.IRequest;
 import redis.clients.jedis.JedisCommands;
 
