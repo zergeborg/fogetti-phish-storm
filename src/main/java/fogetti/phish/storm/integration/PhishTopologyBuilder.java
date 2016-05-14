@@ -43,24 +43,24 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
-			.setMaxSpoutPending(10);
+			.setMaxSpoutPending(100);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(1);
 		builder.setBolt("urlsplit", new URLBolt(), 1)
 			.fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1);
-		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 64)
+		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
 		    .addConfiguration("timeout", 5000)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
-			.setNumTasks(128);
-        builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 64)
+			.setNumTasks(256);
+        builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
             .addConfiguration("timeout", 15000)
             .shuffleGrouping("googletrends-fast",
                     GoogleSemBolt.RETRY_STREAM)
             .shuffleGrouping("googletrends-slow",
                     GoogleSemBolt.RETRY_STREAM)
-            .setNumTasks(128);
+            .setNumTasks(256);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
 			.globalGrouping("googletrends-fast",
 			        GoogleSemBolt.SUCCESS_STREAM)
