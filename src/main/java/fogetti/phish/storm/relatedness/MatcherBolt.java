@@ -38,7 +38,7 @@ public class MatcherBolt extends AbstractRedisBolt {
     private Map<String, Long> lookup = new HashMap<>();
     private String countDataFile;
     private String psDataFile;
-    private AckResult ack = new AckResult();
+    private AckResult ack;
     private ObjectMapper mapper = new ObjectMapper();
 
     private static class SplitResult {
@@ -88,6 +88,7 @@ public class MatcherBolt extends AbstractRedisBolt {
 
     @Override
     public void execute(Tuple input) {
+        ack = new AckResult();
         String schemedUrl = input.getStringByField("url");
         logger.debug("Calculating relatedness for [{}]", schemedUrl);
         String URL = schemedUrl.split("//")[1];
