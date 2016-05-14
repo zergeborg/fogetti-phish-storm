@@ -44,12 +44,12 @@ public class PhishTopologyBuilder {
 		builder
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 4)
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
-            .setNumTasks(2);
-		builder.setBolt("urlsplit", new URLBolt(), 4)
+            .setNumTasks(1);
+		builder.setBolt("urlsplit", new URLBolt(), 1)
 			.fieldsGrouping("urlmatch", new Fields("word", "url"))
-			.setNumTasks(2);
+			.setNumTasks(1);
 		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
 		    .addConfiguration("timeout", 5000)
 			.fieldsGrouping("urlsplit", new Fields("segment", "url"))
