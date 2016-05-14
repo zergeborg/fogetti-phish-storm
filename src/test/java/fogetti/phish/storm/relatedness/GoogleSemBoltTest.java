@@ -135,7 +135,6 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(input, atLeast(1)).getStringByField("segment");
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
-        verify(spy, never()).ack(input);
         verify(spy, never()).fail(input);
     }
 
