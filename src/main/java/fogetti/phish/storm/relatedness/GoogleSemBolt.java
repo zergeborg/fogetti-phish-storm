@@ -90,6 +90,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		} catch (IOException e) {
             logger.error("Google Trend request failed", e.getMessage());
             collector.emit(RETRY_STREAM, input, new Values(new HashSet<>(), segment, url));
+            collector.ack(input);
         } finally {
 			returnInstance(jedisCommand);
 		}
