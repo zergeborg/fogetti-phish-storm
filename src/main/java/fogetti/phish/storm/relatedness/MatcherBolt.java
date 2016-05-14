@@ -31,7 +31,6 @@ public class MatcherBolt extends AbstractRedisBolt {
 
     private static final long serialVersionUID = -3604538816426992025L;
     private static final Logger logger = LoggerFactory.getLogger(MatcherBolt.class);
-    private OutputCollector collector;
     private double N = 1024908267229.;
     private double itervalues = 0.;
     private Map<String, List<String>> memomap = new HashMap<>();
@@ -56,7 +55,6 @@ public class MatcherBolt extends AbstractRedisBolt {
     @SuppressWarnings("rawtypes")
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         super.prepare(stormConf, context, collector);
-        this.collector = collector;
         this.lookup = readCountFromFile();
     }
 
