@@ -10,8 +10,14 @@ public class PhishTopologyRemoteRunner {
 		StormTopology topology = PhishTopologyBuilder.build();
 		
 		Config config = new Config();
-		config.setNumWorkers(120);
+		config.setNumWorkers(20);
 		config.setMessageTimeoutSecs(30);
+		config.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE,
+	               new Integer(16384));
+	    config.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE,
+	               new Integer(16384));
+	    config.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE,
+	               new Integer(32));
 		
 		StormSubmitter.submitTopology("phish-storm-topology", config, topology);
 	}
