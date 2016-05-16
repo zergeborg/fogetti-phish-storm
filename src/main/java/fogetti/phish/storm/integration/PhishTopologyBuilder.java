@@ -50,17 +50,17 @@ public class PhishTopologyBuilder {
 		builder.setBolt("urlsplit", new URLBolt(), 1)
 			.fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1);
-		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 32)
 		    .addConfiguration("timeout", 5000)
 			.shuffleGrouping("urlsplit")
-			.setNumTasks(256);
-        builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+			.setNumTasks(64);
+        builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 32)
             .addConfiguration("timeout", 15000)
             .shuffleGrouping("googletrends-fast",
                     GoogleSemBolt.RETRY_STREAM)
             .shuffleGrouping("googletrends-slow",
                     GoogleSemBolt.RETRY_STREAM)
-            .setNumTasks(256);
+            .setNumTasks(64);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
 			.globalGrouping("googletrends-fast",
 			        GoogleSemBolt.SUCCESS_STREAM)
