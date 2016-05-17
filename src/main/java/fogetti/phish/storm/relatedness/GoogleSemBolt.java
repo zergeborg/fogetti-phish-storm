@@ -63,7 +63,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	@Override
 	public void execute(Tuple input) {
-		String segment = input.getStringByField("segment");
+		String segment = input.getStringByField("word");
 		String url = input.getStringByField("url");
 		JedisCommands jedisCommand = null;
 		try {
