@@ -1,10 +1,11 @@
 package fogetti.phish.storm.client;
 
 import java.io.IOException;
+import java.net.Proxy;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.http.HttpHost;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -12,38 +13,32 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Response;
+
 public class GoogleTrends {
 
     private static final Logger logger = LoggerFactory.getLogger(GoogleTrends.class);
 
-    private final HttpHost httpHost;
     private final String keyword;
     private final IRequest request;
-    private final Integer connectTimeout;
-    private final Integer socketTimeout;
+    private final OkHttpClient client;
 
-    private GoogleTrends(IRequest request, HttpHost httpHost, String keyword, Integer connectTimeout, Integer socketTimeout) {
-        if (request == null || httpHost == null || keyword == null || connectTimeout == null || socketTimeout == null) {
+    private GoogleTrends(OkHttpClient client, IRequest request, String keyword) {
+        if (client == null) {
             throw new NullPointerException();
         }
+        this.client = client;
         this.request = request;
-        this.httpHost = httpHost;
         this.keyword = keyword;
-        this.connectTimeout = connectTimeout;
-        this.socketTimeout = socketTimeout;
     }
 
     public Set<String> topSearches() throws IOException {
         Set<String> result = new HashSet<>();
         String query
-        = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=TOP_QUERIES_0_0", keyword);
-        String html = request.Get(query)
-                .viaProxy(httpHost)
-                .connectTimeout(connectTimeout)
-                .socketTimeout(socketTimeout)
-                .execute()
-                .returnContent()
-                .asString();
+            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=TOP_QUERIES_0_0", keyword);
+        Response response = client.newCall(request.Get(query)).execute();
+        String html = response.body().string();
         Document doc = Jsoup.parse(html);
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
@@ -59,14 +54,9 @@ public class GoogleTrends {
     public Set<String> risingSearches() throws IOException {
         Set<String> result = new HashSet<>();
         String query
-        = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=RISING_QUERIES_0_0", keyword);
-        String html = request.Get(query)
-                .viaProxy(httpHost)
-                .connectTimeout(connectTimeout)
-                .socketTimeout(socketTimeout)
-                .execute()
-                .returnContent()
-                .asString();
+            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=RISING_QUERIES_0_0", keyword);
+        Response response = client.newCall(request.Get(query)).execute();
+        String html = response.body().string();
         Document doc = Jsoup.parse(html);
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
@@ -81,18 +71,27 @@ public class GoogleTrends {
 
     public static class Builder {
 
-        private final HttpHost httpHost;
+        private final Proxy proxy;
         private final String keyword;
         private final IRequest request;
         private Integer connectTimeout = 5000;
         private Integer socketTimeout = 5000;
+        private OkHttpClient client = null;
 
-        public Builder(IRequest request, HttpHost httpHost, String keyword) {
+        public Builder(IRequest request, Proxy proxy, String keyword) {
+            if (request == null || proxy == null || keyword == null) {
+                throw new NullPointerException();
+            }
             this.request = request;
-            this.httpHost = httpHost;
+            this.proxy = proxy;
             this.keyword = keyword;
         }
 
+        public Builder setHttpClient(OkHttpClient client) {
+            this.client = client;
+            return this;
+        }
+        
         public Builder setConnectTimeout(Integer connectTimeout) {
             this.connectTimeout = connectTimeout;
             return this;
@@ -103,9 +102,23 @@ public class GoogleTrends {
             return this;
         }
         
-        public GoogleTrends build() {
-            return new GoogleTrends(request, httpHost, keyword, connectTimeout, socketTimeout);
+        private OkHttpClient buildClient() {
+            if (client == null) {
+                client = new OkHttpClient
+                        .Builder()
+                        .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+                        .readTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+                        .writeTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+                        .proxy(proxy)
+                        .build();
+
+            }
+            return client;
         }        
+
+        public GoogleTrends build() {
+            return new GoogleTrends(buildClient(), request, keyword);
+        }
     }
 
 }

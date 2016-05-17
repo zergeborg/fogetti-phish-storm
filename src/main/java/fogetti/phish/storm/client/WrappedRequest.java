@@ -3,9 +3,8 @@ package fogetti.phish.storm.client;
 import java.io.IOException;
 import java.io.Serializable;
 
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.client.fluent.Response;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public final class WrappedRequest implements IRequest, Serializable {
 
@@ -13,11 +12,11 @@ public final class WrappedRequest implements IRequest, Serializable {
 
     @Override
     public Request Get(String query) throws IOException {
-        return Request.Get(query);
+        return new Request.Builder().url(query).build();
     }
 
     @Override
-    public Response execute() throws ClientProtocolException, IOException {
+    public Response execute() throws IOException {
         throw new UnsupportedOperationException();
     }
     

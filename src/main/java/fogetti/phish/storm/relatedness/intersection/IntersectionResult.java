@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.client.IRequest;
+import okhttp3.OkHttpClient;
+import okhttp3.Response;
 import orestes.bloomfilter.BloomFilter;
 import orestes.bloomfilter.FilterBuilder;
 
@@ -31,8 +33,7 @@ public class IntersectionResult {
 	private final BloomFilter<String> RELrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
     private final IRequest alexa;
     private final String resultUrl;
-    private int connectTimeout = 5000;
-    private int socketTimeout = 5000;
+    private final OkHttpClient client;
     private Integer RANKING;
 
 	public IntersectionResult(
@@ -41,13 +42,15 @@ public class IntersectionResult {
 		Map<String, Collection<String>> MLDTermindex,
 		Map<String, Collection<String>> MLDPSTermindex,
 		IRequest alexa,
-		String resultUrl) {
+		String resultUrl,
+		OkHttpClient client) {
 		this.RDTermindex = RDTermindex;
 		this.REMTermindex = REMTermindex;
 		this.MLDTermindex = MLDTermindex;
 		this.MLDPSTermindex = MLDPSTermindex;
         this.alexa = alexa;
         this.resultUrl = resultUrl;
+        this.client = client;
 	}
 
 	public void init() {
@@ -119,12 +122,8 @@ public class IntersectionResult {
 
     private void initRanking() {
         try {
-            String xml = alexa.Get("http://data.alexa.com/data?cli=10&url="+resultUrl)
-                    .connectTimeout(connectTimeout)
-                    .socketTimeout(socketTimeout)
-                    .execute()
-                    .returnContent()
-                    .asString();
+            Response response = client.newCall(alexa.Get("http://data.alexa.com/data?cli=10&url="+resultUrl)).execute();
+            String xml = response.body().string();
             Document doc = Jsoup.parse(xml, "", Parser.xmlParser());
             for (Element e : doc.select("POPULARITY")) {
                 String text = e.attr("TEXT");

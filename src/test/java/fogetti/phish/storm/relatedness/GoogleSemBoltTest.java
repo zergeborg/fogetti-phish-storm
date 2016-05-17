@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.HashMap;
@@ -16,7 +17,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.http.client.fluent.Request;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
@@ -24,14 +24,25 @@ import org.apache.storm.tuple.Values;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import fogetti.phish.storm.client.IRequest;
-import fogetti.phish.storm.client.ResponseRequest;
+import fogetti.phish.storm.client.OkClientUtil;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.SpyingGoogleSemBolt.Builder;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
 
+@PowerMockIgnore("javax.management.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({Request.class, Response.class, ResponseBody.class})
 public class GoogleSemBoltTest extends GoogleBoltTest {
 
     private String paypal;
@@ -89,9 +100,10 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
     @Test
     public void cachedSegmentNotFound() throws Exception {
         // Given we want to get related words for a keyword
-        IRequest request = new ResponseRequest("ordinary-top-searches.html");
-        Request innerRequest = request.Get("test");
-        SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
+        SpyingGoogleSemBolt bolt = builder
+                .setRequest(mock(IRequest.class))
+                .setClient(OkClientUtil.getMockedClient("ordinary-top-searches.html"))
+                .build();
         Tuple keyword = mock(Tuple.class);
         when(keyword.getStringByField("word")).thenReturn(paypal);
 
@@ -105,7 +117,6 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 
         // Then we send a request to Google
         verify(keyword, atLeast(1)).getStringByField("url");
-        verify(innerRequest, atLeast(1)).execute();
         verify(collector, atLeast(1)).emit((Tuple)anyObject(), anyObject());
         verify(collector).ack(keyword);
     }
@@ -113,9 +124,10 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
     @Test
     public void googleRequestFailed() throws Exception {
         // Given we want to query Google Related data
-        IRequest request = new ResponseRequest("ordinary-top-searches.html");
-        Request innerRequest = request.Get("test");
-        SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
+        SpyingGoogleSemBolt bolt = builder
+                .setRequest(new ErrorThrowingRequest(new SocketTimeoutException()))
+                .setClient(mock(OkHttpClient.class))
+                .build();
 
         // When the bolt sends a new query to Google
         Tuple input = mock(Tuple.class);
@@ -126,22 +138,21 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
         bolt.prepare(config, null, spy);
-        when(innerRequest.execute()).thenThrow(new SocketTimeoutException());
         bolt.execute(input);
 
         // Then it fails
         verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
-        verify(innerRequest, atLeast(1)).execute();
         verify(spy, atLeast(1)).fail(input);
     }
 
     @Test
     public void googleRequestSucceeds() throws Exception {
         // Given we want to query Google Related data
-        IRequest request = new ResponseRequest("ordinary-top-searches.html");
-        Request innerRequest = request.Get("test");
-        SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
+        SpyingGoogleSemBolt bolt = builder
+                .setRequest(mock(IRequest.class))
+                .setClient(OkClientUtil.getMockedClient("ordinary-top-searches.html"))
+                .build();
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
         Map<String, Object> config = new HashMap<>();
@@ -157,7 +168,6 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // Then it sends top searches to the intersection bolt
         verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
-        verify(innerRequest, atLeast(1)).execute();
         HashSet<String> tops = readTopSearchesFromFile("ordinary-top-searches.html");
         Values topSearches = new Values(tops, paypal, "url");
         verify(spy, atLeast(1)).emit(input, topSearches);
@@ -168,7 +178,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
     @Test
     public void integration() throws Exception {
         // Given we want to query Google Related data
-        GoogleSemBolt bolt = new GoogleSemBolt(null, null, new WrappedRequest());
+        GoogleSemBolt bolt = new ClientBuildingGoogleSemBolt(null, null, new WrappedRequest());
 
         // When the bolt receives a new tuple
         Tuple input = mock(Tuple.class);
@@ -179,4 +189,20 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // Then it sends a new query to Google
         verify(input, atLeast(1)).getString(0);
     }
+
+   private static class ErrorThrowingRequest implements IRequest {
+        
+        private final IOException t;
+        
+        public ErrorThrowingRequest(IOException t){ this.t = t; }
+        
+        @Override
+        public Request Get(String query) throws IOException {
+            throw t;
+        }
+
+        @Override
+        public Response execute() throws IOException { return null; }
+    }
+
 }

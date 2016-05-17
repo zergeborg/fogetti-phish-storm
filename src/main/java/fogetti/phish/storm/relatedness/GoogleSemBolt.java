@@ -4,6 +4,8 @@ import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,7 +16,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpHost;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -29,16 +30,17 @@ import org.slf4j.LoggerFactory;
 import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
+import okhttp3.OkHttpClient;
 import redis.clients.jedis.JedisCommands;
 
-public class GoogleSemBolt extends AbstractRedisBolt {
+public abstract class GoogleSemBolt extends AbstractRedisBolt {
 
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
     private final File proxies;
     private final IRequest request;
     private List<String> proxyList;
-    private long timeout;
+    protected long timeout;
 
 	public GoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request) {
 		super(config);
@@ -58,6 +60,8 @@ public class GoogleSemBolt extends AbstractRedisBolt {
             logger.error("Preparing the Google SEM bolt failed", e);
         }
 	}
+	
+	public abstract OkHttpClient buildClient();
 
 	@Override
 	public void execute(Tuple input) {
@@ -86,7 +90,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			collector.fail(input);
 			Thread.currentThread().interrupt();
 		} catch (IOException e) {
-            logger.error("Google Trend request failed", e.getMessage());
+            logger.error("Google Trend request failed", e);
             collector.fail(input);
         } finally {
 			returnInstance(jedisCommand);
@@ -98,10 +102,11 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 		int nextPick = new Random().nextInt(proxyList.size());
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
-		HttpHost httpHost = new HttpHost(hostAndPort[0],Integer.parseInt(hostAndPort[1]));
-        Builder builder = new GoogleTrends.Builder(request, httpHost, segment);
-        builder = builder.setConnectTimeout((int)timeout);
-        builder = builder.setSocketTimeout((int)timeout);
+		Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(hostAndPort[0],Integer.parseInt(hostAndPort[1])));
+        Builder builder = new GoogleTrends.Builder(request, proxy, segment)
+                .setHttpClient(buildClient())
+                .setConnectTimeout((int)timeout)
+                .setSocketTimeout((int)timeout);
 		GoogleTrends client = builder.build();
 		result.addAll(client.topSearches());
 		result.addAll(client.risingSearches());

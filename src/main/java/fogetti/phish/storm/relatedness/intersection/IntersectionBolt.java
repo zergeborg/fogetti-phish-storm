@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
@@ -29,6 +30,7 @@ import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
+import okhttp3.OkHttpClient;
 import redis.clients.jedis.JedisCommands;
 
 public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback {
@@ -39,7 +41,9 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private final IntersectionAction intersectionAction;
 	private final JedisPoolConfig config;
     private final File resultDataFile;
-	
+    private int connectTimeout = 5000;
+    private int socketTimeout = 5000;
+
 	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
 		super(config);
 		this.intersectionAction = intersectionAction;
@@ -118,10 +122,22 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		Map<String, Collection<String>> RDTermindex = segments.getRDTerms(result);
 		segments.removeIf(termEntry -> REMTermindex.containsKey(termEntry.getKey()));
 		segments.removeIf(termEntry -> RDTermindex.containsKey(termEntry.getKey()));
-		IntersectionResult intersection = new IntersectionResult(RDTermindex,REMTermindex,MLDTermindex,MLDPSTermindex, new WrappedRequest(), result.URL);
+        OkHttpClient client = buildClient();
+		IntersectionResult intersection = new IntersectionResult(RDTermindex,REMTermindex,MLDTermindex,MLDPSTermindex, new WrappedRequest(), result.URL, client);
 		intersection.init();
 		return intersection;
 	}
+
+    private OkHttpClient buildClient() {
+        OkHttpClient client
+            = new OkHttpClient
+                .Builder()
+                .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+                .readTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+                .writeTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+                .build();
+        return client;
+    }
 
 	private void logIntersectionResult(IntersectionResult intersection) {
 		logger.info("[JRR={}, "

@@ -8,6 +8,7 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 
 import fogetti.phish.storm.client.IRequest;
+import okhttp3.OkHttpClient;
 import redis.clients.jedis.JedisCommands;
 
 public class SpyingGoogleSemBolt extends GoogleSemBolt {
@@ -15,10 +16,17 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
     private static final long serialVersionUID = 3798709600022221909L;
     private final JedisCommands jedis;
     protected OutputCollector collector;
+    private final OkHttpClient client;
 
-    private SpyingGoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request, JedisCommands jedis) {
+    private SpyingGoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request, JedisCommands jedis, OkHttpClient client) {
         super(config, proxies, request);
         this.jedis = jedis;
+        this.client = client;
+    }
+    
+    @Override
+    public OkHttpClient buildClient() {
+        return client;
     }
 
     @Override
@@ -41,6 +49,7 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
         private JedisCommands jedis;
         private File proxies;
         private IRequest request;
+        private OkHttpClient client;
         
         public Builder setConfig(JedisPoolConfig config) {
             this.config = config;
@@ -62,8 +71,13 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
             return this;
         }
         
+        public Builder setClient(OkHttpClient client) {
+            this.client = client;
+            return this;
+        }
+        
         public SpyingGoogleSemBolt build() {
-            return new SpyingGoogleSemBolt(this.config, this.proxies, this.request, this.jedis);
+            return new SpyingGoogleSemBolt(this.config, this.proxies, this.request, this.jedis, this.client);
         }
     }
 }

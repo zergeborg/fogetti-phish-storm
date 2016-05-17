@@ -2,12 +2,11 @@ package fogetti.phish.storm.client;
 
 import java.io.IOException;
 
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.client.fluent.Response;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public interface IRequest {
 
     Request Get(String query) throws IOException;
-    Response execute() throws ClientProtocolException, IOException;
+    Response execute() throws IOException;
 }
