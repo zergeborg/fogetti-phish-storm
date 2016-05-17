@@ -126,7 +126,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declareStream(SUCCESS_STREAM, new Fields("googletrends", "segment", "url"));
-		declarer.declareStream(RETRY_STREAM, new Fields("googletrends", "segment", "url"));
+		declarer.declareStream(SUCCESS_STREAM, new Fields("googletrends", "word", "url"));
+		declarer.declareStream(RETRY_STREAM, new Fields("googletrends", "word", "url"));
 	}
 }
