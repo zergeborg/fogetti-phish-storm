@@ -59,7 +59,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	public void execute(Tuple input) {
 		@SuppressWarnings("unchecked")
 		Set<String> termset = (Set<String>) input.getValue(0);
-		String segment = input.getStringByField("segment");
+		String segment = input.getStringByField("word");
 		save(segment, termset);
 		String url = input.getStringByField("url");
 		updateSegmentIndex(termset, segment, url);
