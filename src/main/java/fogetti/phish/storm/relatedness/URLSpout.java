@@ -105,6 +105,7 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void ack(Object msgId) {
+	    logger.info("Acking [{}]", msgId);
         Jedis jedis = null;
         AckResult result = null;
         try {

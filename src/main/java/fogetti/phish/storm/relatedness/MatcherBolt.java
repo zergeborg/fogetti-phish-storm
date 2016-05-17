@@ -141,11 +141,14 @@ public class MatcherBolt extends AbstractRedisBolt {
 
     private void emit(Tuple input, String URL) {
         for (String word : ack.getRDurl()) {
+            logger.debug("Emitting [{}]", word);
             collector.emit(input, new Values(word, URL));
         }
         for (String word : ack.getREMurl()) {
+            logger.debug("Emitting [{}]", word);
             collector.emit(input, new Values(word, URL));
         }
+        logger.debug("Acking [{}]", input);
         collector.ack(input);
     }
 
