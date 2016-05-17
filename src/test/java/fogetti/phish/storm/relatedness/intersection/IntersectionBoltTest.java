@@ -73,7 +73,7 @@ public class IntersectionBoltTest {
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
 		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
-		when(keyword.getStringByField("segment")).thenReturn(paypal);
+		when(keyword.getStringByField("word")).thenReturn(paypal);
 		when(keyword.getStringByField("url")).thenReturn("http://google.com");
 		Set<String> termset = new HashSet<>();
 		termset.add("paypal payment");
@@ -96,7 +96,7 @@ public class IntersectionBoltTest {
 		JedisPoolConfig config = mock(JedisPoolConfig.class);
 		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
-		when(keyword.getStringByField("segment")).thenReturn(paypal);
+		when(keyword.getStringByField("word")).thenReturn(paypal);
 		HashSet<String> termset = new HashSet<String>();
 		termset.add("paypal payment");
 		when(keyword.getValue(0)).thenReturn(termset);
@@ -122,7 +122,7 @@ public class IntersectionBoltTest {
 
 		Tuple input = mock(Tuple.class);
 		when(input.getValue(0)).thenReturn(new HashSet<String>());
-		when(input.getStringByField("segment")).thenReturn("something~http://valami.com");
+		when(input.getStringByField("word")).thenReturn("something~http://valami.com");
 		when(input.getStringByField("url")).thenReturn("http://google.com");
 		OutputCollector collector = mock(OutputCollector.class);
 		// When the input is empty
