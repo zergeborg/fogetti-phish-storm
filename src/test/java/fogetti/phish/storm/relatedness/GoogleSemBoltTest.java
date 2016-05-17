@@ -95,7 +95,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         Request innerRequest = request.Get("test");
         SpyingGoogleSemBolt bolt = builder.setRequest(request).build();
         Tuple keyword = mock(Tuple.class);
-        when(keyword.getStringByField("segment")).thenReturn(paypal);
+        when(keyword.getStringByField("word")).thenReturn(paypal);
 
         // When we send a request to redis which returns no cached segment
         when(jedis.smembers(anyString())).thenReturn(null);
@@ -121,7 +121,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 
         // When the bolt sends a new query to Google
         Tuple input = mock(Tuple.class);
-        when(input.getStringByField("segment")).thenReturn(paypal);
+        when(input.getStringByField("word")).thenReturn(paypal);
         when(input.getStringByField("url")).thenReturn("url");
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
@@ -132,7 +132,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         bolt.execute(input);
 
         // Then it fails
-        verify(input, atLeast(1)).getStringByField("segment");
+        verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
         verify(spy, never()).fail(input);
@@ -152,12 +152,12 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
 
         // When the bolt sends a new query to Google and succeeds
         Tuple input = mock(Tuple.class);
-        when(input.getStringByField("segment")).thenReturn(paypal);
+        when(input.getStringByField("word")).thenReturn(paypal);
         when(input.getStringByField("url")).thenReturn("url");
         bolt.execute(input);
 
         // Then it sends top searches to the intersection bolt
-        verify(input, atLeast(1)).getStringByField("segment");
+        verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
         HashSet<String> tops = readTopSearchesFromFile("ordinary-top-searches.html");
