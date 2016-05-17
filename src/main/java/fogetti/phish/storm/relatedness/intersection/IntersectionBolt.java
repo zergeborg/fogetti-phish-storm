@@ -105,8 +105,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 			ObjectMapper mapper = new ObjectMapper();
 			AckResult result = mapper.readValue(message, AckResult.class);
 			IntersectionResult intersection = initIntersectionResult(result);
-			logIntersectionResult(intersection);
-			saveIntersectionResult(intersection);
+			logIntersectionResult(intersection, result.URL);
+			saveIntersectionResult(intersection, result.URL);
 			intersectionAction.run();
 			logger.info("Message [{}] intersected", message);
 		} catch (IOException e) {
@@ -139,7 +139,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
         return client;
     }
 
-	private void logIntersectionResult(IntersectionResult intersection) {
+	private void logIntersectionResult(IntersectionResult intersection, String URL) {
 		logger.info("[JRR={}, "
 					+ "JRA={}, "
 					+ "JAA={}, "
@@ -151,7 +151,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 					+ "RATIORREM={}, "
 					+ "MLDRES={}, "
 					+ "MLDPSRES={}, "
-					+ "RANKING={}]",
+					+ "RANKING={}, "
+					+ "URL={}]",
 					intersection.JRR(),
 					intersection.JRA(),
 					intersection.JAA(),
@@ -163,10 +164,11 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 					intersection.RATIORREM(),
 					intersection.MLDRES(),
 					intersection.MLDPSRES(),
-					intersection.RANKING());
+					intersection.RANKING(),
+					URL);
 	}
 
-    private void saveIntersectionResult(IntersectionResult intersection) {
+    private void saveIntersectionResult(IntersectionResult intersection, String URL) {
         List<String> lines = Arrays.asList(new String[] {
                 String.format(
                 "%f,"
@@ -180,7 +182,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 + "%f,"
                 + "%d,"
                 + "%d,"
-                + "%d",
+                + "%d"
+                + "%s",
                 intersection.JRR(),
                 intersection.JRA(),
                 intersection.JAA(),
@@ -192,7 +195,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 intersection.RATIORREM(),
                 intersection.MLDRES(),
                 intersection.MLDPSRES(),
-                intersection.RANKING())});
+                intersection.RANKING(),
+                URL)});
         try {
             Files.write(resultDataFile.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         } catch (IOException e) {
