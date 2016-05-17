@@ -33,8 +33,6 @@ import redis.clients.jedis.JedisCommands;
 
 public class GoogleSemBolt extends AbstractRedisBolt {
 
-    public static final String RETRY_STREAM = "retry";
-    public static final String SUCCESS_STREAM = "success";
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
     private final File proxies;
@@ -78,7 +76,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(SUCCESS_STREAM, input, new Values(new HashSet<>(lookupValue), segment, url));
+			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, url));
 			collector.ack(input);
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
@@ -89,8 +87,7 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 			Thread.currentThread().interrupt();
 		} catch (IOException e) {
             logger.error("Google Trend request failed", e.getMessage());
-            collector.emit(RETRY_STREAM, input, new Values(new HashSet<>(), segment, url));
-            collector.ack(input);
+            collector.fail(input);
         } finally {
 			returnInstance(jedisCommand);
 		}
@@ -126,7 +123,6 @@ public class GoogleSemBolt extends AbstractRedisBolt {
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declareStream(SUCCESS_STREAM, new Fields("googletrends", "word", "url"));
-		declarer.declareStream(RETRY_STREAM, new Fields("googletrends", "word", "url"));
+	    declarer.declare(new Fields("googletrends", "word", "url"));
 	}
 }

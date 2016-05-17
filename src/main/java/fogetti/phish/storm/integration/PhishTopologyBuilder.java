@@ -46,22 +46,12 @@ public class PhishTopologyBuilder {
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(1);
-		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1)
+		builder.setBolt("googletrends", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1)
 		    .addConfiguration("timeout", 5000)
-			.shuffleGrouping("urlmatch")
+		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1);
-        builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1)
-            .addConfiguration("timeout", 15000)
-            .shuffleGrouping("googletrends-fast",
-                    GoogleSemBolt.RETRY_STREAM)
-            .shuffleGrouping("googletrends-slow",
-                    GoogleSemBolt.RETRY_STREAM)
-            .setNumTasks(1);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
-			.globalGrouping("googletrends-fast",
-			        GoogleSemBolt.SUCCESS_STREAM)
-			.globalGrouping("googletrends-slow",
-			        GoogleSemBolt.SUCCESS_STREAM);
+			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}

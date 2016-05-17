@@ -1,11 +1,9 @@
 package fogetti.phish.storm.relatedness;
 
-import static fogetti.phish.storm.relatedness.GoogleSemBolt.SUCCESS_STREAM;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -108,7 +106,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // Then we send a request to Google
         verify(keyword, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
-        verify(collector, atLeast(1)).emit(anyString(), (Tuple)anyObject(), anyObject());
+        verify(collector, atLeast(1)).emit((Tuple)anyObject(), anyObject());
         verify(collector).ack(keyword);
     }
 
@@ -135,7 +133,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
         verify(innerRequest, atLeast(1)).execute();
-        verify(spy, never()).fail(input);
+        verify(spy, atLeast(1)).fail(input);
     }
 
     @Test
@@ -162,7 +160,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         verify(innerRequest, atLeast(1)).execute();
         HashSet<String> tops = readTopSearchesFromFile("ordinary-top-searches.html");
         Values topSearches = new Values(tops, paypal, "url");
-        verify(spy, atLeast(1)).emit(SUCCESS_STREAM, input, topSearches);
+        verify(spy, atLeast(1)).emit(input, topSearches);
         verify(spy, atLeast(1)).ack(input);
     }
 
