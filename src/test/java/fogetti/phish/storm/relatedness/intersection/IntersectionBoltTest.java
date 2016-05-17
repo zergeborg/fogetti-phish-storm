@@ -17,13 +17,14 @@ import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Test;
 
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
 
 public class IntersectionBoltTest {
 	
 	private String paypal;
-	private JedisCommands jedis;
+	private Jedis jedis;
     private String resultDataFile;
 	
 	private class TestDoubleIntersectionBolt extends IntersectionBolt {
@@ -47,7 +48,7 @@ public class IntersectionBoltTest {
 	@Before
 	public void setup() throws Exception {
 		paypal = "paypal";
-		jedis = mock(JedisCommands.class);
+		jedis = mock(Jedis.class);
 		String absolutePath = new File(this.getClass().getResource(".").toURI()).getAbsolutePath();
         resultDataFile = absolutePath + File.separator + "phishing-result.csv";
 	}

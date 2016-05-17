@@ -31,7 +31,7 @@ import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
 import okhttp3.OkHttpClient;
-import redis.clients.jedis.JedisCommands;
+import redis.clients.jedis.Jedis;
 
 public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback {
 
@@ -72,11 +72,11 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	}
 
 	private void save(String segment, Set<String> termset) {
-		JedisCommands jedis = null;
+		Jedis jedis = null;
 		try {
-	        jedis = getInstance();
-	        if (!jedis.exists(segment) && !termset.isEmpty()) {
-	            String key = REDIS_SEGMENT_PREFIX + segment;
+	        jedis = (Jedis) getInstance();
+	        String key = REDIS_SEGMENT_PREFIX + segment;
+	        if (!jedis.exists(key) && !termset.isEmpty()) {
 	        	jedis.sadd(key, termset.toArray(new String[termset.size()]));
 	        }
 		} finally{
@@ -182,7 +182,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 + "%f,"
                 + "%d,"
                 + "%d,"
-                + "%d"
+                + "%d,"
                 + "%s",
                 intersection.JRR(),
                 intersection.JRA(),
