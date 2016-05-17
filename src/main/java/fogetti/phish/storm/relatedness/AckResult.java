@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -27,8 +26,6 @@ public class AckResult implements Serializable {
 	public String URL;
 	public Set<String> RDurl = new HashSet<>();
 	public Set<String> REMurl = new HashSet<>();
-	public Stack<String> RDstack = new Stack<>();
-	public Stack<String> REMstack = new Stack<>();
 	
 	public boolean addRD(String s) {
 		return RDurl.add(s);
@@ -38,44 +35,8 @@ public class AckResult implements Serializable {
 		return REMurl.add(s);
 	}
 	
-	public String pushRD(String s) {
-		return RDstack.push(s);
-	}
-
-	public String pushREM(String s) {
-		return REMstack.push(s);
-	}
-	
-	public void pushAllREM(Collection<String> c) {
-		for (String s : c) {
-			REMstack.push(s);
-		}
-	}
-	
-	public String pop() {
-		if (!RDstack.isEmpty()) {
-			String pop = RDstack.pop();
-			addRD(pop);
-			return pop;
-		}
-		if (!REMstack.isEmpty()) {
-			String pop = REMstack.pop();
-			addREM(pop);
-			return pop;
-		}
-		return null;
-	}
-
 	public boolean addAllREM(Collection<String> s) {
 		return REMurl.addAll(s);
-	}
-	
-	private boolean RDempty() {
-		return RDstack.empty();
-	}
-	
-	private boolean REMempty() {
-		return REMstack.empty();
 	}
 	
 	public void clear() {
@@ -100,7 +61,7 @@ public class AckResult implements Serializable {
 	}
 
 	public boolean finished() {
-		return RDempty() && REMempty() && allsent;
+		return allsent;
 	}
 	
 	public void setAllsent(boolean allsent) {

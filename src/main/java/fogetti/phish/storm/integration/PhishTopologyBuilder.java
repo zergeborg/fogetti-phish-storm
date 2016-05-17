@@ -10,7 +10,6 @@ import org.apache.storm.tuple.Fields;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.GoogleSemBolt;
 import fogetti.phish.storm.relatedness.MatcherBolt;
-import fogetti.phish.storm.relatedness.URLBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
 import fogetti.phish.storm.relatedness.intersection.IntersectionAction;
 import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
@@ -47,12 +46,9 @@ public class PhishTopologyBuilder {
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(1);
-		builder.setBolt("urlsplit", new URLBolt(), 1)
-			.fieldsGrouping("urlmatch", new Fields("word", "url"))
-			.setNumTasks(1);
 		builder.setBolt("googletrends-fast", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1)
 		    .addConfiguration("timeout", 5000)
-			.shuffleGrouping("urlsplit")
+			.shuffleGrouping("urlmatch")
 			.setNumTasks(1);
         builder.setBolt("googletrends-slow", new GoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1)
             .addConfiguration("timeout", 15000)
