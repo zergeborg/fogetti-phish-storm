@@ -32,7 +32,7 @@ public class URLSpoutTest {
     private List<String> ackList;
     private String result;
     private JedisPoolConfig config;
-    private String publishMsg = "{\"allsent\":true,\"MLD\":null,\"MLDPS\":null,\"URL\":null,\"RDurl\":[],\"REMurl\":[],\"RDstack\":[],\"REMstack\":[],\"rdurl\":[],\"remurl\":[]}";
+    private String publishMsg = "{\"allsent\":true,\"MLD\":null,\"MLDPS\":null,\"URL\":null,\"RDurl\":[],\"REMurl\":[],\"rdurl\":[],\"remurl\":[]}";
 
 	private class TestDoubleURLSpout extends URLSpout {
 
