@@ -77,6 +77,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	        jedis = (Jedis) getInstance();
 	        String key = REDIS_SEGMENT_PREFIX + segment;
 	        if (!jedis.exists(key) && !termset.isEmpty()) {
+	            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
 	        	jedis.sadd(key, termset.toArray(new String[termset.size()]));
 	        }
 		} finally{
