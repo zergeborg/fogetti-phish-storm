@@ -124,8 +124,8 @@ public class MatcherBolt extends AbstractRedisBolt {
         Jedis jedis = null;
         try {
             jedis = (Jedis) getInstance();
-            String message = jedis.lpop("acked:"+schemedUrl);
-            if (message == null) {
+            List<String> message = jedis.lrange("acked:"+schemedUrl, 0L, 0L);
+            if (message == null || message.isEmpty()) {
                 String result = mapper.writeValueAsString(ack);
                 logger.info("Saving [AckResult={}]", result);
                 jedis.rpush("acked:"+schemedUrl, result);
