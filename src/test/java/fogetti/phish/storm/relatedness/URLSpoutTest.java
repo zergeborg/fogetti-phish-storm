@@ -52,7 +52,6 @@ public class URLSpoutTest {
 		    
 		    @Override
 		    public void enqueue(String msgId) {
-                URLSpout.logger.info("Acking [{}]", msgId);
                 AckResult result = null;
                 try {
                     List<String> messages = jedis.blpop(0, new String[]{"acked:"+msgId.toString()});
@@ -62,21 +61,18 @@ public class URLSpoutTest {
                         collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
                     }
                 } catch (IOException e) {
-                    URLSpout.logger.error("Could not look up AckResult related to "+msgId.toString(), e);
                     collector.reportError(e);
                 }
                 try {
                     String msg = mapper.writeValueAsString(result);
                     publish("phish", msg);
                 } catch (JsonProcessingException e) {
-                    URLSpout.logger.error("Could not send acknowledgment to the intersection bolt", e);
                     collector.reportError(e);
                 }
 		    }
 
 		    private void publish(String channel, String msg) {
 	            PublishMessage message = new PublishMessage(channel, msg);
-	            URLSpout.logger.info("Publishing [Message={}]", message.msg);
 	            jedis.rpush(message.channel, message.msg);
 		    }
 
