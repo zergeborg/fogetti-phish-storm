@@ -12,7 +12,6 @@ import org.apache.storm.spout.SpoutOutputCollector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fogetti.phish.storm.db.PublishMessage;
@@ -24,19 +23,56 @@ public class AsynchronousAcker implements Runnable, IAcker {
     private static final Logger logger = LoggerFactory.getLogger(AsynchronousAcker.class);
     private final JedisCommandsInstanceContainer container;
     private final ObjectMapper mapper = new ObjectMapper();
-    private final SpoutOutputCollector collector;
     private final BlockingQueue<String> msgQ = new PriorityBlockingQueue<>();
+    private final RetryQueue retry;
+    
+    private static class RetryQueue implements Runnable {
+
+        private static final Logger logger = LoggerFactory.getLogger(RetryQueue.class);
+        private final AsynchronousAcker acker;
+        private final BlockingQueue<String> retryQ = new PriorityBlockingQueue<>();
+        
+        public RetryQueue(AsynchronousAcker acker) {
+            this.acker = acker;
+        }
+        
+        private void enqueue(String msgId) {
+            try {
+                retryQ.put(msgId);
+            } catch (InterruptedException e) {
+                logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
+                Thread.currentThread().interrupt();
+            }
+        }
+        
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    String msgId = retryQ.take();
+                    acker.enqueue(msgId);
+                } catch (InterruptedException e) {
+                    logger.error("Retrying message failed", e);
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+        
+    }
 
     public AsynchronousAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
-        this.collector = collector;
         this.container = JedisCommandsContainerBuilder.build(config);
+        this.retry = new RetryQueue(this);
+        new Thread(this.retry, "retryThread").start();
     }
 
     @Override
     public void enqueue(String msgId) {
-        boolean offered = msgQ.offer(msgId);
-        if (!offered) {
-            logger.warn("Could not enqueue message id [{}]", msgId);
+        try {
+            msgQ.put(msgId);
+        } catch (InterruptedException e) {
+            logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -54,21 +90,18 @@ public class AsynchronousAcker implements Runnable, IAcker {
                             result = mapper.readValue(messages.get(1), AckResult.class);
                         } else {
                             logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
-                            enqueue(msgId);
+                            retry.enqueue(msgId);
+                        }
+                        if (result != null) {
+                            String msg = mapper.writeValueAsString(result);
+                            publish("phish", msg, jedis);
                         }
                     } catch (IOException e) {
                         logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
-                        enqueue(msgId);
-                    }
-                    try {
-                        String msg = mapper.writeValueAsString(result);
-                        publish("phish", msg, jedis);
-                    } catch (JsonProcessingException e) {
-                        logger.error("Could not send acknowledgment to the intersection bolt", e);
-                        collector.reportError(e);
+                        retry.enqueue(msgId);
                     }
                 } catch (InterruptedException e) {
-                    logger.error("Subscribing to Redis failed", e);
+                    logger.error("Acking asynchronously failed", e);
                     Thread.currentThread().interrupt();
                 }
             }
