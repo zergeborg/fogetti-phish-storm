@@ -16,7 +16,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.exception.AckingFailedException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 
@@ -53,10 +52,11 @@ public class AsynchronousAcker implements Runnable, IAcker {
                     if (messages != null) {
                         result = mapper.readValue(messages.get(1), AckResult.class);
                     } else {
-                        collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
+                        logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
+                        enqueue(msgId);
                     }
                 } catch (IOException e) {
-                    logger.warn("Could not look up AckResult related to "+msgId.toString(), e);
+                    logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
                     enqueue(msgId);
                 }
                 try {
