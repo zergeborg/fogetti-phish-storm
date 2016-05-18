@@ -31,7 +31,7 @@ import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
 import okhttp3.OkHttpClient;
-import redis.clients.jedis.JedisCommands;
+import redis.clients.jedis.Jedis;
 
 public abstract class GoogleSemBolt extends AbstractRedisBolt {
 
@@ -67,13 +67,13 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	public void execute(Tuple input) {
 		String segment = input.getStringByField("word");
 		String url = input.getStringByField("url");
-		JedisCommands jedisCommand = null;
+		Jedis jedis = null;
 		try {
 			TimeUnit.MILLISECONDS.sleep(1000);
 
-			jedisCommand = getInstance();
+			jedis = (Jedis) getInstance();
 			String key = REDIS_SEGMENT_PREFIX + segment;
-			Set<String> lookupValue = jedisCommand.smembers(key);
+			Set<String> lookupValue = jedis.smembers(key);
 			if (lookupValue == null || lookupValue.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				lookupValue = calculateSearches(segment);
@@ -94,7 +94,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
         } finally {
-			returnInstance(jedisCommand);
+			returnInstance(jedis);
 		}
 	}
 

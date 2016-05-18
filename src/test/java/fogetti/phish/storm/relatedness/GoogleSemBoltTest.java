@@ -37,7 +37,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import redis.clients.jedis.JedisCommands;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
 
 @PowerMockIgnore("javax.management.*")
@@ -46,14 +46,14 @@ import redis.clients.jedis.exceptions.JedisException;
 public class GoogleSemBoltTest extends GoogleBoltTest {
 
     private String paypal;
-    private JedisCommands jedis;
+    private Jedis jedis;
     private IRequest request;
     private Builder builder;
 
     @Before
     public void setup() throws Exception {
         paypal = "paypal";
-        jedis = mock(JedisCommands.class);
+        jedis = mock(Jedis.class);
         URL proxyResource = this.getClass().getClassLoader().getResource("proxies.txt");
         File proxies = new File(proxyResource.toURI());
         JedisPoolConfig config = mock(JedisPoolConfig.class);

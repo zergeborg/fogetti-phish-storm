@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fogetti.phish.storm.db.PublishMessage;
+import fogetti.phish.storm.exception.AckingFailedException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 
@@ -110,8 +111,13 @@ public class URLSpout extends BaseRichSpout {
         AckResult result = null;
         try {
             jedis = (Jedis) getInstance();
-            List<String> messages = jedis.blpop(0, new String[]{"acked:"+msgId.toString()});
-            result = mapper.readValue(messages.get(1), AckResult.class);
+            List<String> messages = jedis.blpop(60, new String[]{"acked:"+msgId.toString()});
+            if (messages != null) {
+                result = mapper.readValue(messages.get(1), AckResult.class);
+            } else {
+                collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
+                return;
+            }
         } catch (IOException e) {
             logger.error("Could not look up AckResult related to "+msgId.toString(), e);
             collector.reportError(e);
