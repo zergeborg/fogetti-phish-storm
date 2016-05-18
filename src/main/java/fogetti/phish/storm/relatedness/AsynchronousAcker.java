@@ -69,11 +69,22 @@ public class AsynchronousAcker implements Runnable, IAcker {
     @Override
     public void enqueue(String msgId) {
         try {
-            msgQ.put(msgId);
+            if (!saved(msgId)) {
+                msgQ.put(msgId);
+            }
         } catch (InterruptedException e) {
             logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
             Thread.currentThread().interrupt();
         }
+    }
+
+    private boolean saved(String msgId) {
+        String key = "saved:" + msgId;
+        try (Jedis jedis = (Jedis) getInstance()) {
+            List<String> messages = jedis.lrange(key, 0L, 0L);
+            if (messages != null && !messages.isEmpty()) return true;
+        }
+        return false;
     }
 
     @Override
@@ -89,15 +100,17 @@ public class AsynchronousAcker implements Runnable, IAcker {
                         if (messages != null) {
                             result = mapper.readValue(messages.get(1), AckResult.class);
                         } else {
-                            logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
+                            logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
                             retry.enqueue(msgId);
+                            continue;
                         }
                         if (result != null) {
                             String msg = mapper.writeValueAsString(result);
                             publish("phish", msg, jedis);
+                            save(msgId, jedis);
                         }
                     } catch (IOException e) {
-                        logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
+                        logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
                         retry.enqueue(msgId);
                     }
                 } catch (InterruptedException e) {
@@ -112,6 +125,11 @@ public class AsynchronousAcker implements Runnable, IAcker {
         PublishMessage message = new PublishMessage(channel, msg);
         logger.info("Publishing [Message={}]", message.msg);
         jedis.rpush(message.channel, message.msg);
+    }
+
+    private void save(String msgId, Jedis jedis) {
+        logger.info("Saving [msgId={}]", msgId);
+        jedis.rpush("saved:"+msgId, msgId);
     }
 
     /**
