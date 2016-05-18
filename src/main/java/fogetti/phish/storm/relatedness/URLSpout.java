@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public abstract class URLSpout extends BaseRichSpout {
 
 	private static final long serialVersionUID = -6424905468176142975L;
-	static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
+	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
 	private ListIterator<String> iterator;
