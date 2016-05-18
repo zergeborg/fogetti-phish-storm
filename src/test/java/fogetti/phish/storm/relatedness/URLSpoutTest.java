@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,10 +19,12 @@ import org.apache.storm.spout.SpoutOutputCollector;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import fogetti.phish.storm.db.PublishMessage;
+import fogetti.phish.storm.exception.AckingFailedException;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCommands;
 
 public class URLSpoutTest {
 
@@ -38,18 +41,55 @@ public class URLSpoutTest {
 
 		private static final long serialVersionUID = -7748829151740848266L;
 
+		private class SynchronousAcker implements IAcker {
+
+		    private final ObjectMapper mapper = new ObjectMapper();
+		    private final SpoutOutputCollector collector;
+
+		    public SynchronousAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
+		        this.collector = collector;
+		    }
+		    
+		    @Override
+		    public void enqueue(String msgId) {
+                URLSpout.logger.info("Acking [{}]", msgId);
+                AckResult result = null;
+                try {
+                    List<String> messages = jedis.blpop(0, new String[]{"acked:"+msgId.toString()});
+                    if (messages != null) {
+                        result = mapper.readValue(messages.get(1), AckResult.class);
+                    } else {
+                        collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
+                    }
+                } catch (IOException e) {
+                    URLSpout.logger.error("Could not look up AckResult related to "+msgId.toString(), e);
+                    collector.reportError(e);
+                }
+                try {
+                    String msg = mapper.writeValueAsString(result);
+                    publish("phish", msg);
+                } catch (JsonProcessingException e) {
+                    URLSpout.logger.error("Could not send acknowledgment to the intersection bolt", e);
+                    collector.reportError(e);
+                }
+		    }
+
+		    private void publish(String channel, String msg) {
+	            PublishMessage message = new PublishMessage(channel, msg);
+	            URLSpout.logger.info("Publishing [Message={}]", message.msg);
+	            jedis.rpush(message.channel, message.msg);
+		    }
+
+		}
+		
 		public TestDoubleURLSpout(String urlDataFile, JedisPoolConfig poolConfig) {
 			super(urlDataFile, poolConfig);
 		}
 
-		@Override
-		protected JedisCommands getInstance() {
-            return jedis;
-		}
-
-		@Override
-		protected void returnInstance(JedisCommands instance) {
-		}
+        @Override
+        public IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
+            return new SynchronousAcker(collector, config);
+        }
 	}
 
 	@Before

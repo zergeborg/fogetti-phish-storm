@@ -2,7 +2,6 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -10,8 +9,6 @@ import java.util.Map;
 import java.util.Scanner;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
-import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
-import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -21,14 +18,6 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.exception.AckingFailedException;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCommands;
-
 /**
  * Implementation of the following real time phishing classifier:
  * <a href="https://orbilu.uni.lu/bitstream/10993/20053/1/phishStorm-revised.pdf">
@@ -37,18 +26,16 @@ import redis.clients.jedis.JedisCommands;
  * @author gergely.nagy
  *
  */
-public class URLSpout extends BaseRichSpout {
+public abstract class URLSpout extends BaseRichSpout {
 
 	private static final long serialVersionUID = -6424905468176142975L;
-	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
-
+	static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
 	private ListIterator<String> iterator;
 	private String urlDataFile;
 	private JedisPoolConfig config;
-	private JedisCommandsInstanceContainer container;
-    private ObjectMapper mapper = new ObjectMapper();
+    private IAcker acker;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -61,8 +48,10 @@ public class URLSpout extends BaseRichSpout {
 		this.collector = collector;
 		this.urllist = readURLListFromFile();
 		this.iterator = urllist.listIterator();
-		this.container = JedisCommandsContainerBuilder.build(config);
+        this.acker = buildAcker(collector, config);
 	}
+
+    public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config);
 
 	private List<String> readURLListFromFile() {
 		List<String> urls = new ArrayList<>();
@@ -107,43 +96,7 @@ public class URLSpout extends BaseRichSpout {
 	@Override
 	public void ack(Object msgId) {
 	    logger.info("Acking [{}]", msgId);
-        Jedis jedis = null;
-        AckResult result = null;
-        try {
-            jedis = (Jedis) getInstance();
-            List<String> messages = jedis.blpop(60, new String[]{"acked:"+msgId.toString()});
-            if (messages != null) {
-                result = mapper.readValue(messages.get(1), AckResult.class);
-            } else {
-                collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
-                return;
-            }
-        } catch (IOException e) {
-            logger.error("Could not look up AckResult related to "+msgId.toString(), e);
-            collector.reportError(e);
-            return;
-        } finally {
-            returnInstance(jedis);
-        }
-        try {
-            String msg = mapper.writeValueAsString(result);
-            publish("phish", msg);
-        } catch (JsonProcessingException e) {
-            logger.error("Could not send acknowledgment to the intersection bolt", e);
-            collector.reportError(e);
-        }
-	}
-
-	private void publish(String channel, String msg) {
-		Jedis jedis = null;
-		try {
-			jedis = (Jedis) getInstance();
-			PublishMessage message = new PublishMessage(channel, msg);
-			logger.info("Publishing [Message={}]", message.msg);
-			jedis.rpush(message.channel, message.msg);
-		} finally {
-			returnInstance(jedis);
-		}
+	    acker.enqueue(msgId.toString());
 	}
 
 	@Override
@@ -153,21 +106,4 @@ public class URLSpout extends BaseRichSpout {
 		iterator.add(msgId.toString());
 	}
 
-	/**
-	 * Borrow JedisCommands instance from container.<p></p>
-	 * JedisCommands is an interface which contains single key operations.
-	 * @return implementation of JedisCommands
-	 * @see JedisCommandsInstanceContainer#getInstance()
-	 */
-	protected JedisCommands getInstance() {
-		return this.container.getInstance();
-	}
-
-	/**
-	 * Return borrowed instance to container.
-	 * @param instance borrowed object
-	 */
-	protected void returnInstance(JedisCommands instance) {
-		this.container.returnInstance(instance);
-	}
 }

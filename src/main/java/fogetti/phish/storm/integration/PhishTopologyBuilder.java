@@ -8,9 +8,9 @@ import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
 
 import fogetti.phish.storm.client.WrappedRequest;
+import fogetti.phish.storm.relatedness.AsynchronousURLSpout;
 import fogetti.phish.storm.relatedness.ClientBuildingGoogleSemBolt;
 import fogetti.phish.storm.relatedness.MatcherBolt;
-import fogetti.phish.storm.relatedness.URLSpout;
 import fogetti.phish.storm.relatedness.intersection.IntersectionAction;
 import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 
@@ -41,7 +41,7 @@ public class PhishTopologyBuilder {
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
-			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
+			.setSpout("urlsource", new AsynchronousURLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(1000);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
