@@ -31,7 +31,7 @@ public class AsynchronousAcker implements Runnable, IAcker {
         this.collector = collector;
         this.container = JedisCommandsContainerBuilder.build(config);
     }
-    
+
     @Override
     public void enqueue(String msgId) {
         boolean offered = msgQ.offer(msgId);
@@ -42,43 +42,43 @@ public class AsynchronousAcker implements Runnable, IAcker {
 
     @Override
     public void run() {
-        while (!Thread.currentThread().isInterrupted()) {
-            try (Jedis jedis = (Jedis) getInstance()) {
-                String msgId = msgQ.take();
-                logger.info("Acking enqueued message [{}]", msgId);
-                AckResult result = null;
+        try (Jedis jedis = (Jedis) getInstance()) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId.toString()});
-                    if (messages != null) {
-                        result = mapper.readValue(messages.get(1), AckResult.class);
-                    } else {
+                    String msgId = msgQ.take();
+                    logger.info("Acking enqueued message [{}]", msgId);
+                    AckResult result = null;
+                    try {
+                        List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId.toString()});
+                        if (messages != null) {
+                            result = mapper.readValue(messages.get(1), AckResult.class);
+                        } else {
+                            logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
+                            enqueue(msgId);
+                        }
+                    } catch (IOException e) {
                         logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
                         enqueue(msgId);
                     }
-                } catch (IOException e) {
-                    logger.warn("Could not look up AckResult related to {}. Requeueing."+msgId);
-                    enqueue(msgId);
+                    try {
+                        String msg = mapper.writeValueAsString(result);
+                        publish("phish", msg, jedis);
+                    } catch (JsonProcessingException e) {
+                        logger.error("Could not send acknowledgment to the intersection bolt", e);
+                        collector.reportError(e);
+                    }
+                } catch (InterruptedException e) {
+                    logger.error("Subscribing to Redis failed", e);
+                    Thread.currentThread().interrupt();
                 }
-                try {
-                    String msg = mapper.writeValueAsString(result);
-                    publish("phish", msg);
-                } catch (JsonProcessingException e) {
-                    logger.error("Could not send acknowledgment to the intersection bolt", e);
-                    collector.reportError(e);
-                }
-            } catch (InterruptedException e) {
-                logger.error("Subscribing to Redis failed", e);
-                Thread.currentThread().interrupt();
             }
         }
     }
 
-    private void publish(String channel, String msg) {
-        try (Jedis jedis = (Jedis) getInstance()) {
-            PublishMessage message = new PublishMessage(channel, msg);
-            logger.info("Publishing [Message={}]", message.msg);
-            jedis.rpush(message.channel, message.msg);
-        }
+    private void publish(String channel, String msg, Jedis jedis) {
+        PublishMessage message = new PublishMessage(channel, msg);
+        logger.info("Publishing [Message={}]", message.msg);
+        jedis.rpush(message.channel, message.msg);
     }
 
     /**
