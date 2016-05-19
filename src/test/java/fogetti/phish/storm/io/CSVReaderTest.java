@@ -28,14 +28,14 @@ public class CSVReaderTest {
 	@Test
     public void testName() throws Exception {
         // Given
-        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2015-12-09/phishing-urls.csv");
-        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2015-12-09/random-urls.csv");
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-05-18/valid-and-phishing-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-05-18/random-urls.csv");
 	    
         // When
         CSVReader csvReader = new CSVReader(source, target);
 
         // Then
-        csvReader.writeRandomUrls(21970);
+        csvReader.writeRandomUrls(78824);
     }
 	
 	@Ignore
