@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Base64.Encoder;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -38,6 +39,7 @@ public abstract class URLSpout extends BaseRichSpout {
 	private String urlDataFile;
 	private JedisPoolConfig config;
     private IAcker acker;
+    private Encoder encoder;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -51,6 +53,7 @@ public abstract class URLSpout extends BaseRichSpout {
 		this.urllist = readURLListFromFile();
 		this.iterator = urllist.listIterator();
         this.acker = buildAcker(collector, config);
+        this.encoder = Base64.getEncoder();
 	}
 
     public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config);
@@ -88,7 +91,7 @@ public abstract class URLSpout extends BaseRichSpout {
 
 	private void doNextTuple(String URLWithScheme) {
 	    String URL = URLWithScheme + "#" +System.currentTimeMillis();
-	    String encodedURL = Base64.getEncoder().encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+        String encodedURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
 		collector.emit(new Values(encodedURL), encodedURL);
 	}
 

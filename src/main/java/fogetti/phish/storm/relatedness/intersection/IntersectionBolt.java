@@ -41,13 +41,13 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
-	private final Decoder decoder = Base64.getDecoder();
-    private final Encoder encoder = Base64.getEncoder();
 	private final IntersectionAction intersectionAction;
 	private final JedisPoolConfig config;
     private final File resultDataFile;
     private int connectTimeout = 5000;
     private int socketTimeout = 5000;
+    private Decoder decoder;
+    private Encoder encoder;
 
 	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
 		super(config);
@@ -62,6 +62,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		super.prepare(stormConf, context, collector);
 		JedisListener listener = new JedisListener(config, "phish", this);
 		new Thread(listener, "subscriberThread").start();
+		this.decoder = Base64.getDecoder();
+		this.encoder = Base64.getEncoder();
 	}
 
 	@Override

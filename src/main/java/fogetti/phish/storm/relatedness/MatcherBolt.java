@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Base64.Decoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +41,8 @@ public class MatcherBolt extends AbstractRedisBolt {
     private String countDataFile;
     private String psDataFile;
     private AckResult ack;
-    private ObjectMapper mapper = new ObjectMapper();
+    private ObjectMapper mapper;
+    private Decoder decoder;
 
     private static class SplitResult {
         String first;
@@ -58,6 +60,8 @@ public class MatcherBolt extends AbstractRedisBolt {
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         super.prepare(stormConf, context, collector);
         this.lookup = readCountFromFile();
+        this.mapper = new ObjectMapper();
+        this.decoder = Base64.getDecoder();
     }
 
     private Map<String, Long> readCountFromFile() {
@@ -90,7 +94,7 @@ public class MatcherBolt extends AbstractRedisBolt {
     public void execute(Tuple input) {
         ack = new AckResult();
         String encodedURL = input.getStringByField("url");
-        byte[] decodedURL = Base64.getDecoder().decode(encodedURL);
+        byte[] decodedURL = decoder.decode(encodedURL);
         String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
         ack.URL = schemedUrl;
         calculate(schemedUrl);
