@@ -96,8 +96,9 @@ public class MatcherBolt extends AbstractRedisBolt {
         String encodedURL = input.getStringByField("url");
         byte[] decodedURL = decoder.decode(encodedURL);
         String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
-        ack.URL = schemedUrl;
-        calculate(schemedUrl);
+        String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
+        ack.URL = shortURL;
+        calculate(shortURL);
         if (saveResult(encodedURL)) {
             emit(input, encodedURL);
         } else {

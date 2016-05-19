@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -73,10 +74,12 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		String segment = input.getStringByField("word");
 		save(segment, termset);
 		String encodedURL = input.getStringByField("url");
-		updateSegmentIndex(termset, segment, encodedURL);
-        byte[] decoded = decoder.decode(encodedURL);
-		String url = new String(decoded, StandardCharsets.UTF_8);
-        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
+		byte[] decoded = decoder.decode(encodedURL);
+		String longURL = new String(decoded, StandardCharsets.UTF_8);
+		String URL = StringUtils.substringBeforeLast(longURL, "#");
+		String encodedShortURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+		updateSegmentIndex(termset, segment, encodedShortURL);
+        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", URL, segment, termset);
 		collector.ack(input);
 	}
 

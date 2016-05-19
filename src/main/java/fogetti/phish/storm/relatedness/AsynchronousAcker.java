@@ -1,10 +1,15 @@
 package fogetti.phish.storm.relatedness;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
 import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
@@ -24,6 +29,8 @@ public class AsynchronousAcker implements Runnable, IAcker {
     private final JedisCommandsInstanceContainer container;
     private final ObjectMapper mapper = new ObjectMapper();
     private final BlockingQueue<String> msgQ = new PriorityBlockingQueue<>();
+    private final Decoder decoder = Base64.getDecoder();
+    private final Encoder encoder = Base64.getEncoder();
     private final RetryQueue retry;
     
     private static class RetryQueue implements Runnable {
@@ -79,12 +86,22 @@ public class AsynchronousAcker implements Runnable, IAcker {
     }
 
     private boolean saved(String msgId) {
-        String key = "saved:" + msgId;
+        String encodedURL = getEncodedURL(msgId);
+        String key = "saved:" + encodedURL;
         try (Jedis jedis = (Jedis) getInstance()) {
             List<String> messages = jedis.lrange(key, 0L, 0L);
             if (messages != null && !messages.isEmpty()) return true;
         }
         return false;
+    }
+
+    private String getEncodedURL(String msgId) {
+        byte[] decodedURL = decoder.decode(msgId);
+        String longURL = new String(decodedURL, StandardCharsets.UTF_8);
+        String URL = StringUtils.substringBeforeLast(longURL, "#");
+        byte[] message = URL.getBytes(StandardCharsets.UTF_8);
+        String encodedURL = encoder.encodeToString(message);
+        return encodedURL;
     }
 
     @Override
@@ -128,8 +145,9 @@ public class AsynchronousAcker implements Runnable, IAcker {
     }
 
     private void save(String msgId, Jedis jedis) {
-        logger.info("Saving [msgId={}]", msgId);
-        jedis.rpush("saved:"+msgId, msgId);
+        String encodedURL = getEncodedURL(msgId);
+        logger.info("Saving [msgId={}]", encodedURL);
+        jedis.rpush("saved:"+encodedURL, encodedURL);
     }
 
     /**
@@ -142,11 +160,4 @@ public class AsynchronousAcker implements Runnable, IAcker {
         return this.container.getInstance();
     }
 
-    /**
-     * Return borrowed instance to container.
-     * @param instance borrowed object
-     */
-    private void returnInstance(JedisCommands instance) {
-        this.container.returnInstance(instance);
-    }
 }
