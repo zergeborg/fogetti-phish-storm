@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -75,7 +77,8 @@ public class IntersectionBoltTest {
 		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
 		when(keyword.getStringByField("word")).thenReturn(paypal);
-		when(keyword.getStringByField("url")).thenReturn("http://google.com");
+        String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
+		when(keyword.getStringByField("url")).thenReturn(URL);
 		Set<String> termset = new HashSet<>();
 		termset.add("paypal payment");
 		when(keyword.getValue(0)).thenReturn(termset);
@@ -101,7 +104,8 @@ public class IntersectionBoltTest {
 		HashSet<String> termset = new HashSet<String>();
 		termset.add("paypal payment");
 		when(keyword.getValue(0)).thenReturn(termset);
-		when(keyword.getStringByField("url")).thenReturn("http://google.com");
+		String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
+		when(keyword.getStringByField("url")).thenReturn(URL);
 
 		// When we send a request to redis which returns no cached segment
 		when(jedis.exists(anyString())).thenReturn(false);
@@ -124,7 +128,8 @@ public class IntersectionBoltTest {
 		Tuple input = mock(Tuple.class);
 		when(input.getValue(0)).thenReturn(new HashSet<String>());
 		when(input.getStringByField("word")).thenReturn("something~http://valami.com");
-		when(input.getStringByField("url")).thenReturn("http://google.com");
+        String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
+		when(input.getStringByField("url")).thenReturn(URL);
 		OutputCollector collector = mock(OutputCollector.class);
 		// When the input is empty
 		iBolt.prepare(null, null, collector);

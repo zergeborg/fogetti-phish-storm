@@ -2,7 +2,9 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -85,7 +87,9 @@ public abstract class URLSpout extends BaseRichSpout {
 	}
 
 	private void doNextTuple(String URLWithScheme) {
-		collector.emit(new Values(URLWithScheme), URLWithScheme);
+	    String URL = URLWithScheme + "#" +System.currentTimeMillis();
+	    String encodedURL = Base64.getEncoder().encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+		collector.emit(new Values(encodedURL), encodedURL);
 	}
 
 	@Override
@@ -94,9 +98,9 @@ public abstract class URLSpout extends BaseRichSpout {
 	}
 
 	@Override
-	public void ack(Object msgId) {
-	    logger.info("Acking [{}]", msgId);
-	    acker.enqueue(msgId.toString());
+	public void ack(Object encodedURL) {
+	    logger.info("Acking [{}]", encodedURL);
+	    acker.enqueue(encodedURL.toString());
 	}
 
 	@Override

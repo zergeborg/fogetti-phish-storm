@@ -96,7 +96,7 @@ public class AsynchronousAcker implements Runnable, IAcker {
                     logger.info("Acking enqueued message [{}]", msgId);
                     AckResult result = null;
                     try {
-                        List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId.toString()});
+                        List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId});
                         if (messages != null) {
                             result = mapper.readValue(messages.get(1), AckResult.class);
                         } else {

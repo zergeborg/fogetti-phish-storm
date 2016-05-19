@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +41,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private static final long serialVersionUID = -2553128795688882389L;
 	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, URLSegments> segmentindex = new ConcurrentHashMap<>();
+	private final Decoder decoder = Base64.getDecoder();
+    private final Encoder encoder = Base64.getEncoder();
 	private final IntersectionAction intersectionAction;
 	private final JedisPoolConfig config;
     private final File resultDataFile;
@@ -65,9 +70,11 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		Set<String> termset = (Set<String>) input.getValue(0);
 		String segment = input.getStringByField("word");
 		save(segment, termset);
-		String url = input.getStringByField("url");
-		updateSegmentIndex(termset, segment, url);
-		logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
+		String encodedURL = input.getStringByField("url");
+		updateSegmentIndex(termset, segment, encodedURL);
+        byte[] decoded = decoder.decode(encodedURL);
+		String url = new String(decoded, StandardCharsets.UTF_8);
+        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, termset);
 		collector.ack(input);
 	}
 
@@ -116,7 +123,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	}
 
     private IntersectionResult initIntersectionResult(AckResult result) {
-		URLSegments segments = segmentindex.get(result.URL);
+        String encodedURL = encoder.encodeToString(result.URL.getBytes(StandardCharsets.UTF_8));
+		URLSegments segments = segmentindex.get(encodedURL);
 		Map<String, Collection<String>> MLDTermindex = segments.getMLDTerms(result);
 		Map<String, Collection<String>> MLDPSTermindex = segments.getMLDPSTerms(result);
 		Map<String, Collection<String>> REMTermindex = segments.getREMTerms(result);

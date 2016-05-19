@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
@@ -66,11 +65,9 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	@Override
 	public void execute(Tuple input) {
 		String segment = input.getStringByField("word");
-		String url = input.getStringByField("url");
+		String encodedURL = input.getStringByField("url");
 		Jedis jedis = null;
 		try {
-			TimeUnit.MILLISECONDS.sleep(1000);
-
 			jedis = (Jedis) getInstance();
 			String key = REDIS_SEGMENT_PREFIX + segment;
 			Set<String> lookupValue = jedis.smembers(key);
@@ -80,16 +77,12 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, url));
+			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, encodedURL));
 			logger.debug("Acking [{}]", input);
 			collector.ack(input);
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
-		} catch (InterruptedException e) {
-			logger.warn("Interrupted while sleeping");
-			collector.fail(input);
-			Thread.currentThread().interrupt();
 		} catch (IOException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);

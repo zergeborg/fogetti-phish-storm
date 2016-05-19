@@ -2,7 +2,9 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -87,17 +89,23 @@ public class MatcherBolt extends AbstractRedisBolt {
     @Override
     public void execute(Tuple input) {
         ack = new AckResult();
-        String schemedUrl = input.getStringByField("url");
-        logger.debug("Calculating relatedness for [{}]", schemedUrl);
-        String URL = schemedUrl.split("//")[1];
-        ack.URL = URL;
-        calculateRDurl(URL);
-        calculateREMurl(URL);
-        if (saveResult(schemedUrl)) {
-            emit(input, URL);
+        String encodedURL = input.getStringByField("url");
+        byte[] decodedURL = Base64.getDecoder().decode(encodedURL);
+        String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
+        ack.URL = schemedUrl;
+        calculate(schemedUrl);
+        if (saveResult(encodedURL)) {
+            emit(input, encodedURL);
         } else {
             collector.fail(input);
         }
+    }
+
+    private void calculate(String schemedUrl) {
+        logger.debug("Calculating relatedness for [{}]", schemedUrl);
+        String URL = schemedUrl.split("//")[1];
+        calculateRDurl(URL);
+        calculateREMurl(URL);
     }
 
     void calculateRDurl(String URL) {
@@ -120,15 +128,15 @@ public class MatcherBolt extends AbstractRedisBolt {
         return matcher;
     }
 
-    private boolean saveResult(String schemedUrl) {
+    private boolean saveResult(String encodedURL) {
         Jedis jedis = null;
         try {
             jedis = (Jedis) getInstance();
-            List<String> message = jedis.lrange("acked:"+schemedUrl, 0L, 0L);
+            List<String> message = jedis.lrange("acked:"+encodedURL, 0L, 0L);
             if (message == null || message.isEmpty()) {
                 String result = mapper.writeValueAsString(ack);
                 logger.info("Saving [AckResult={}]", result);
-                jedis.rpush("acked:"+schemedUrl, result);
+                jedis.rpush("acked:"+encodedURL, result);
             }
         } catch (JsonProcessingException e) {
             logger.error("Could not save AckResult", e);
@@ -139,14 +147,14 @@ public class MatcherBolt extends AbstractRedisBolt {
         return true;
     }
 
-    private void emit(Tuple input, String URL) {
+    private void emit(Tuple input, String encodedURL) {
         for (String word : ack.getRDurl()) {
             logger.debug("Emitting [{}]", word);
-            collector.emit(input, new Values(word, URL));
+            collector.emit(input, new Values(word, encodedURL));
         }
         for (String word : ack.getREMurl()) {
             logger.debug("Emitting [{}]", word);
-            collector.emit(input, new Values(word, URL));
+            collector.emit(input, new Values(word, encodedURL));
         }
         logger.debug("Acking [{}]", input);
         collector.ack(input);
