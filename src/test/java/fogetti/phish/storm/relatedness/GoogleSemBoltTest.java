@@ -12,15 +12,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,8 +28,12 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.OkClientUtil;
+import fogetti.phish.storm.client.Term;
+import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.SpyingGoogleSemBolt.Builder;
 import okhttp3.OkHttpClient;
@@ -43,7 +46,7 @@ import redis.clients.jedis.exceptions.JedisException;
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Request.class, Response.class, ResponseBody.class})
-public class GoogleSemBoltTest extends GoogleBoltTest {
+public class GoogleSemBoltTest {
 
     private String paypal;
     private Jedis jedis;
@@ -62,6 +65,11 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         builder.setConfig(config).setJedis(jedis).setProxies(proxies).setRequest(request);
     }
 
+    private List<Term> termsOf(String... string) {
+        List<Term> paypalTerms = Arrays.asList(new Term[]{ new Term(string) });
+        return paypalTerms;
+    }
+    
     @Test(expected = JedisException.class)
     public void redisRequestFails() throws Exception {
         // Given we want to get related words for a keyword
@@ -69,7 +77,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         when(keyword.getStringByField("segment")).thenReturn(paypal);
 
         // When we send a request to redis
-        when(jedis.smembers(anyString())).thenThrow(new JedisException("Error"));
+        when(jedis.get(anyString())).thenThrow(new JedisException("Error"));
         builder.build().execute(keyword);
 
         // Then it fails
@@ -81,11 +89,13 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         SpyingGoogleSemBolt bolt = builder.build();
         Tuple keyword = mock(Tuple.class);
         when(keyword.getStringByField("segment")).thenReturn(paypal);
-        Set<String> segments = new HashSet<>();
-        segments.add("paypal payment");
+        Terms segments = new Terms();
+        segments.add(termsOf("paypal payment".split("\\s+")));
+        ObjectMapper mapper = new ObjectMapper();
+        String segString = mapper.writeValueAsString(segments);
 
         // When we send a request to redis
-        when(jedis.smembers(anyString())).thenReturn(segments);
+        when(jedis.get(anyString())).thenReturn(segString);
         OutputCollector collector = mock(OutputCollector.class);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
@@ -108,7 +118,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         when(keyword.getStringByField("word")).thenReturn(paypal);
 
         // When we send a request to redis which returns no cached segment
-        when(jedis.smembers(anyString())).thenReturn(null);
+        when(jedis.get(anyString())).thenReturn(null);
         OutputCollector collector = mock(OutputCollector.class);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
@@ -168,9 +178,7 @@ public class GoogleSemBoltTest extends GoogleBoltTest {
         // Then it sends top searches to the intersection bolt
         verify(input, atLeast(1)).getStringByField("word");
         verify(input, atLeast(1)).getStringByField("url");
-        HashSet<String> tops = readTopSearchesFromFile("ordinary-top-searches.html");
-        Values topSearches = new Values(tops, paypal, "url");
-        verify(spy, atLeast(1)).emit(input, topSearches);
+        verify(spy, atLeast(1)).emit((Tuple)anyObject(), anyObject());
         verify(spy, atLeast(1)).ack(input);
     }
 

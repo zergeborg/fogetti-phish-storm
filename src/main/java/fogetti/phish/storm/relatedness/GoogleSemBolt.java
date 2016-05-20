@@ -12,7 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
@@ -26,9 +25,12 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
+import fogetti.phish.storm.client.Terms;
 import okhttp3.OkHttpClient;
 import redis.clients.jedis.Jedis;
 
@@ -39,6 +41,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
     private final File proxies;
     private final IRequest request;
     private List<String> proxyList;
+    private ObjectMapper mapper;
     protected long timeout;
 
 	public GoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request) {
@@ -53,6 +56,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 		super.prepare(stormConf, context, collector);
 		timeout = (Long)stormConf.get("timeout");
+		mapper = new ObjectMapper();
 		try {
             proxyList = Files.readAllLines(proxies.toPath());
         } catch (IOException e) {
@@ -69,15 +73,20 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		Jedis jedis = null;
 		try {
 			jedis = (Jedis) getInstance();
-			String key = REDIS_SEGMENT_PREFIX + segment;
-			Set<String> lookupValue = jedis.smembers(key);
-			if (lookupValue == null || lookupValue.isEmpty()) {
+			String segments = jedis.get(REDIS_SEGMENT_PREFIX + segment);
+			Terms terms = null;
+			if (segments != null) {
+			    terms = mapper.readValue(segments, Terms.class);
+			} else {
+			    terms = new Terms();
+			}
+			if (terms == null || terms.terms == null || terms.terms.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
-				lookupValue = calculateSearches(segment);
+				terms = calculateSearches(segment);
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(input, new Values(new HashSet<>(lookupValue), segment, encodedURL));
+			collector.emit(input, new Values(terms, segment, encodedURL));
 			logger.debug("Acking [{}]", input);
 			collector.ack(input);
         } catch (NullPointerException e) {
@@ -91,8 +100,8 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		}
 	}
 
-	private Set<String> calculateSearches(String segment) throws IOException {
-		HashSet<String> result = new HashSet<>();
+	private Terms calculateSearches(String segment) throws IOException {
+	    Terms result = new Terms();
 		int nextPick = new Random().nextInt(proxyList.size());
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
@@ -102,8 +111,8 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
                 .setConnectTimeout((int)timeout)
                 .setSocketTimeout((int)timeout);
 		GoogleTrends client = builder.build();
-		result.addAll(client.topSearches());
-		result.addAll(client.risingSearches());
+		result.add(client.topSearches());
+		result.add(client.risingSearches());
         logger.debug("Google Trend request succeeded");
 		return result;
 	}

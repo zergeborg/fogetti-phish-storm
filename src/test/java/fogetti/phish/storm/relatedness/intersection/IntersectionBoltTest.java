@@ -1,6 +1,5 @@
 package fogetti.phish.storm.relatedness.intersection;
 
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -9,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -19,6 +18,8 @@ import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Test;
 
+import fogetti.phish.storm.client.Term;
+import fogetti.phish.storm.client.Terms;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
@@ -55,6 +56,11 @@ public class IntersectionBoltTest {
         resultDataFile = absolutePath + File.separator + "phishing-result.csv";
 	}
 
+    private List<Term> termsOf(String... string) {
+        List<Term> paypalTerms = Arrays.asList(new Term[]{ new Term(string) });
+        return paypalTerms;
+    }
+    
 	@Test(expected = JedisException.class)
 	public void redisRequestFails() throws Exception {
 		// Given we want to get related words for a keyword
@@ -79,8 +85,8 @@ public class IntersectionBoltTest {
 		when(keyword.getStringByField("word")).thenReturn(paypal);
         String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
 		when(keyword.getStringByField("url")).thenReturn(URL);
-		Set<String> termset = new HashSet<>();
-		termset.add("paypal payment");
+        Terms termset = new Terms();
+        termset.add(termsOf("paypal payment".split("\\s+")));
 		when(keyword.getValue(0)).thenReturn(termset);
 
 		// When we send a request to redis
@@ -101,8 +107,8 @@ public class IntersectionBoltTest {
 		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 		Tuple keyword = mock(Tuple.class);
 		when(keyword.getStringByField("word")).thenReturn(paypal);
-		HashSet<String> termset = new HashSet<String>();
-		termset.add("paypal payment");
+		Terms termset = new Terms();
+		termset.add(termsOf("paypal payment".split("\\s+")));
 		when(keyword.getValue(0)).thenReturn(termset);
 		String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
 		when(keyword.getStringByField("url")).thenReturn(URL);
@@ -115,7 +121,7 @@ public class IntersectionBoltTest {
 
 		// Then we send a request to bing
 		verify(keyword, atLeast(1)).getStringByField("url");
-		verify(jedis).sadd(anyString(), anyObject());
+		verify(jedis).set(anyString(), anyString());
 		verify(collector).ack(keyword);
 	}
 	
@@ -126,7 +132,7 @@ public class IntersectionBoltTest {
 		IntersectionBolt iBolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
 
 		Tuple input = mock(Tuple.class);
-		when(input.getValue(0)).thenReturn(new HashSet<String>());
+		when(input.getValue(0)).thenReturn(new Terms());
 		when(input.getStringByField("word")).thenReturn("something~http://valami.com");
         String URL = Base64.getEncoder().encodeToString("http://google.com".getBytes(StandardCharsets.UTF_8));
 		when(input.getStringByField("url")).thenReturn(URL);

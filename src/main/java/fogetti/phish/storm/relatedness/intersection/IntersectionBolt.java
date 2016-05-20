@@ -11,10 +11,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -28,8 +26,10 @@ import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.db.JedisListener;
@@ -69,41 +69,45 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 
 	@Override
 	public void execute(Tuple input) {
-		@SuppressWarnings("unchecked")
-		Set<String> termset = (Set<String>) input.getValue(0);
+		Terms terms = (Terms) input.getValue(0);
 		String segment = input.getStringByField("word");
-		save(segment, termset);
+		save(input, segment, terms);
 		String encodedURL = input.getStringByField("url");
 		byte[] decoded = decoder.decode(encodedURL);
 		String longURL = new String(decoded, StandardCharsets.UTF_8);
 		String URL = StringUtils.substringBeforeLast(longURL, "#");
 		String encodedShortURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
-		updateSegmentIndex(termset, segment, encodedShortURL);
-        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", URL, segment, termset);
+		updateSegmentIndex(terms, segment, encodedShortURL);
+        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", URL, segment, terms);
 		collector.ack(input);
 	}
 
-	private void save(String segment, Set<String> termset) {
+	private void save(Tuple input, String segment, Terms termset) {
 		Jedis jedis = null;
 		try {
 	        jedis = (Jedis) getInstance();
 	        String key = REDIS_SEGMENT_PREFIX + segment;
-	        if (!jedis.exists(key) && !termset.isEmpty()) {
+	        if (!jedis.exists(key) && !termset.terms.isEmpty()) {
 	            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
-	        	jedis.sadd(key, termset.toArray(new String[termset.size()]));
+	            ObjectMapper mapper = new ObjectMapper();
+	            String termString = mapper.writeValueAsString(termset);
+	            jedis.set(key, termString);
 	        }
-		} finally{
+		} catch (JsonProcessingException e) {
+		    logger.error("Could not save the segment into Redis", e);
+		    collector.fail(input);
+        } finally{
 			returnInstance(jedis);
 		}
 
 	}
 
-	private void updateSegmentIndex(Set<String> termset, String segment, String url) {
+	private void updateSegmentIndex(Terms terms, String segment, String url) {
 		if (segmentindex.containsKey(url)) {
-			segmentindex.get(url).put(segment, termset);
+			segmentindex.get(url).put(segment, terms);
 		} else {
 			URLSegments urlsegments = new URLSegments();
-			urlsegments.put(segment, termset);
+			urlsegments.put(segment, terms);
 			segmentindex.put(url, urlsegments);
 		}
 	}
@@ -130,10 +134,10 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
     private IntersectionResult initIntersectionResult(AckResult result) {
         String encodedURL = encoder.encodeToString(result.URL.getBytes(StandardCharsets.UTF_8));
 		URLSegments segments = segmentindex.get(encodedURL);
-		Map<String, Collection<String>> MLDTermindex = segments.getMLDTerms(result);
-		Map<String, Collection<String>> MLDPSTermindex = segments.getMLDPSTerms(result);
-		Map<String, Collection<String>> REMTermindex = segments.getREMTerms(result);
-		Map<String, Collection<String>> RDTermindex = segments.getRDTerms(result);
+		Map<String, Terms> MLDTermindex = segments.getMLDTerms(result);
+		Map<String, Terms> MLDPSTermindex = segments.getMLDPSTerms(result);
+		Map<String, Terms> REMTermindex = segments.getREMTerms(result);
+		Map<String, Terms> RDTermindex = segments.getRDTerms(result);
 		segments.removeIf(termEntry -> REMTermindex.containsKey(termEntry.getKey()));
 		segments.removeIf(termEntry -> RDTermindex.containsKey(termEntry.getKey()));
         OkHttpClient client = buildClient();

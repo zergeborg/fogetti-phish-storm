@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -33,8 +34,8 @@ public class GoogleTrends {
         this.keyword = keyword;
     }
 
-    public Set<String> topSearches() throws IOException {
-        Set<String> result = new HashSet<>();
+    public Set<Term> topSearches() throws IOException {
+        Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=TOP_QUERIES_0_0", keyword);
         Response response = client.newCall(request.Get(query)).execute();
@@ -44,15 +45,16 @@ public class GoogleTrends {
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
             for (Element row : table.select("tr")) {
-                Elements tds = row.select("td");
-                result.add(tds.get(0).text());
+                Elements tds = row.select("td > span:first-child");
+                String text = tds.get(0).text();
+                if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
             }
         }
         return result;
     }
 
-    public Set<String> risingSearches() throws IOException {
-        Set<String> result = new HashSet<>();
+    public Set<Term> risingSearches() throws IOException {
+        Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=RISING_QUERIES_0_0", keyword);
         Response response = client.newCall(request.Get(query)).execute();
@@ -62,8 +64,9 @@ public class GoogleTrends {
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
             for (Element row : table.select("tr")) {
-                Elements tds = row.select("td");
-                result.add(tds.get(0).text());
+                Elements tds = row.select("td > span:first-child");
+                String text = tds.get(0).text();
+                if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
             }
         }
         return result;

@@ -1,7 +1,6 @@
 package fogetti.phish.storm.relatedness.intersection;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 
 import org.jsoup.Jsoup;
@@ -12,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.client.IRequest;
+import fogetti.phish.storm.client.Terms;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
 import orestes.bloomfilter.BloomFilter;
@@ -23,10 +23,10 @@ public class IntersectionResult {
 	/** 25∗20∗3 = 25 md segments * 20 terms from search engine * 3 words in terms */
 	private static final int EXPECTED_ELEMENTS = 1500;
 	
-	private final Map<String, Collection<String>> RDTermindex;
-	private final Map<String, Collection<String>> REMTermindex;
-	private final Map<String, Collection<String>> MLDTermindex;
-	private final Map<String, Collection<String>> MLDPSTermindex;
+	private final Map<String, Terms> RDTermindex;
+	private final Map<String, Terms> REMTermindex;
+	private final Map<String, Terms> MLDTermindex;
+	private final Map<String, Terms> MLDPSTermindex;
 	private final BloomFilter<String> ASrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 	private final BloomFilter<String> RELrem = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
 	private final BloomFilter<String> ASrd = new FilterBuilder(EXPECTED_ELEMENTS, 0.0001).<String>buildBloomFilter();
@@ -37,10 +37,10 @@ public class IntersectionResult {
     private Integer RANKING;
 
 	public IntersectionResult(
-		Map<String, Collection<String>> RDTermindex,
-		Map<String, Collection<String>> REMTermindex,
-		Map<String, Collection<String>> MLDTermindex,
-		Map<String, Collection<String>> MLDPSTermindex,
+		Map<String, Terms> RDTermindex,
+		Map<String, Terms> REMTermindex,
+		Map<String, Terms> MLDTermindex,
+		Map<String, Terms> MLDPSTermindex,
 		IRequest alexa,
 		String resultUrl,
 		OkHttpClient client) {
@@ -69,13 +69,10 @@ public class IntersectionResult {
     private void initASrem() {
 		REMTermindex.entrySet().stream().forEach(v -> {
 			v.getValue()
+			    .terms
 				.stream()
-				.filter(p -> p!=null && p.contains(v.getKey()))
 				.forEach(t -> {
-					String[] split = t.split("\\s+");
-					for (String spl : split) {
-						if (!spl.trim().contains(v.getKey())) ASrem.add(spl);
-					}
+					if (!t.contains(v.getKey())) ASrem.addAll(t.words);
 			});
 		});
 		logger.debug("[ASrem={}]", ASrem);
@@ -83,11 +80,8 @@ public class IntersectionResult {
 
 	private void initRELrem() {
 		REMTermindex.values().stream().forEach(v -> {
-			v.forEach(t -> {
-				String[] split = t.split("\\s+");
-				for (String spl : split) {
-					RELrem.add(spl.trim());
-				}
+			v.terms.forEach(t -> {
+				RELrem.addAll(t.words);
 			});
 		});
 		logger.debug("[RELrem={}]", RELrem);
@@ -96,13 +90,10 @@ public class IntersectionResult {
 	private void initASrd() {
 		RDTermindex.entrySet().stream().forEach(v -> {
 			v.getValue()
+			    .terms
 				.stream()
-				.filter(p -> p!=null && p.contains(v.getKey()))
 				.forEach(t -> {
-					String[] split = t.split("\\s+");
-					for (String spl : split) {
-						if (!spl.trim().contains(v.getKey())) ASrd.add(spl);
-					}
+					if (!t.contains(v.getKey())) ASrd.addAll(t.words);
 			});
 		});
 		logger.debug("[ASrd={}]", ASrd);
@@ -110,11 +101,8 @@ public class IntersectionResult {
 
 	private void initRELrd() {
 		RDTermindex.values().stream().forEach(v -> {
-			v.forEach(t -> {
-				String[] split = t.split("\\s+");
-				for (String spl : split) {
-					RELrd.add(spl.trim());
-				}
+			v.terms.forEach(t -> {
+				RELrd.addAll(t.words);
 			});
 		});
 		logger.debug("[RELrd={}]", RELrd);
@@ -159,15 +147,27 @@ public class IntersectionResult {
 	}
 	
 	public Integer CARDREM() {
-		return REMTermindex.keySet().size();
+	    int count = 0;
+	    for (Terms terms : REMTermindex.values()) {
+            count += terms.count();
+        }
+		return count;
 	}
 	
 	public Double RATIOAREM() {
-		return ASrem.getEstimatedPopulation() / REMTermindex.keySet().size();
+		Integer cardrem = CARDREM();
+		if (cardrem == 0) {
+		    return 0.0D;
+		}
+        return ASrem.getEstimatedPopulation() / cardrem;
 	}
-	
+
 	public Double RATIORREM() {
-		return RELrem.getEstimatedPopulation() / REMTermindex.keySet().size();
+        Integer cardrem = CARDREM();
+        if (cardrem == 0) {
+            return 0.0D;
+        }
+		return RELrem.getEstimatedPopulation() / cardrem;
 	}
 
 	Double RATIOARD() {
@@ -198,10 +198,16 @@ public class IntersectionResult {
 		BloomFilter<String> secondclone = second.clone();
 		BloomFilter<String> thirdclone = third.clone();
 		BloomFilter<String> fourthclone = fourth.clone();
-		if (firstclone.intersect(secondclone) && thirdclone.intersect(fourthclone)) {
-			Double firstPopulation = firstclone.getEstimatedPopulation();
-			Double thirdPopulation = thirdclone.getEstimatedPopulation();
-			return firstPopulation / thirdPopulation;
+		if (firstclone.intersect(secondclone) && thirdclone.union(fourthclone)) {
+			long firstPopulation = Math.round(firstclone.getEstimatedPopulation());
+			long thirdPopulation = Math.round(thirdclone.getEstimatedPopulation());
+			if (firstPopulation == 0 && thirdPopulation == 0) {
+			    return 1.0D;
+			}
+			if (thirdPopulation == 0) {
+			    return 0.0D;
+			}
+			return (double) firstPopulation / thirdPopulation;
 		}
 		return null;
 	}

@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import fogetti.phish.storm.client.Terms;
+
 public class AckResult implements Serializable {
 
 	private static final long serialVersionUID = 3990008783759688342L;
@@ -77,8 +79,8 @@ public class AckResult implements Serializable {
         return REMurl;
     }
 
-    public Map<String, Collection<String>> getREMTerms(Map<String, Collection<String>> termindex) {
-		Map<String, Collection<String>> REMTermindex = 
+    public Map<String, Terms> getREMTerms(Map<String, Terms> termindex) {
+		Map<String, Terms> REMTermindex = 
 			termindex
 			.entrySet()
 			.stream()
@@ -87,8 +89,8 @@ public class AckResult implements Serializable {
 		return REMTermindex;
 	}
 
-	public Map<String, Collection<String>> getRDTerms(Map<String, Collection<String>> termindex) {
-		Map<String, Collection<String>> RDTermindex = 
+	public Map<String, Terms> getRDTerms(Map<String, Terms> termindex) {
+		Map<String, Terms> RDTermindex = 
 			termindex
 			.entrySet()
 			.stream()
@@ -97,8 +99,8 @@ public class AckResult implements Serializable {
 		return RDTermindex;
 	}
 
-	public Map<String, Collection<String>> getMLDTerms(Map<String, Collection<String>> termindex) {
-		Map<String, Collection<String>> RDTermindex = 
+	public Map<String, Terms> getMLDTerms(Map<String, Terms> termindex) {
+		Map<String, Terms> RDTermindex = 
 			termindex
 			.entrySet()
 			.stream()
@@ -107,8 +109,8 @@ public class AckResult implements Serializable {
 		return RDTermindex;
 	}
 
-	public Map<String, Collection<String>> getMLDPSTerms(Map<String, Collection<String>> termindex) {
-		Map<String, Collection<String>> RDTermindex = 
+	public Map<String, Terms> getMLDPSTerms(Map<String, Terms> termindex) {
+		Map<String, Terms> RDTermindex = 
 			termindex
 			.entrySet()
 			.stream()

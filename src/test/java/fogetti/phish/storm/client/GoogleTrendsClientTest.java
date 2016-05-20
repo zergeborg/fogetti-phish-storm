@@ -157,7 +157,7 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
             = new GoogleTrends.Builder(mock(IRequest.class), proxy, "valami").setHttpClient(OkClientUtil.getMockedClient("empty-top-searches.html"));
         GoogleTrends client = builder.build();
-        Set<String> topSearches = client.topSearches();
+        Set<Term> topSearches = client.topSearches();
         assertEquals("There were unexpected top searches", 0, topSearches.size());
     }
 
@@ -167,7 +167,7 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
             = new GoogleTrends.Builder(mock(IRequest.class), proxy, "valami").setHttpClient(OkClientUtil.getMockedClient("ordinary-top-searches.html"));
         GoogleTrends client = builder.build();
-        Set<String> topSearches = client.topSearches();
+        Set<Term> topSearches = client.topSearches();
         assertNotEquals("There were no top searches", 0, topSearches.size());
     }
     
@@ -177,7 +177,7 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
             = new GoogleTrends.Builder(mock(IRequest.class), proxy, "valami").setHttpClient(OkClientUtil.getMockedClient("empty-rising-searches.html"));
         GoogleTrends client = builder.build();
-        Set<String> topSearches = client.risingSearches();
+        Set<Term> topSearches = client.risingSearches();
         assertEquals("There were unexpected top searches", 0, topSearches.size());
     }
 
@@ -187,7 +187,7 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
         = new GoogleTrends.Builder(mock(IRequest.class), proxy, "valami").setHttpClient(OkClientUtil.getMockedClient("ordinary-rising-searches.html"));
         GoogleTrends client = builder.build();
-        Set<String> topSearches = client.risingSearches();
+        Set<Term> topSearches = client.risingSearches();
         assertNotEquals("There were no top searches", 0, topSearches.size());
     }
     
