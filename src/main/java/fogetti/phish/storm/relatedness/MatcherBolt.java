@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -43,6 +44,8 @@ public class MatcherBolt extends AbstractRedisBolt {
     private AckResult ack;
     private ObjectMapper mapper;
     private Decoder decoder;
+    private String[] schemes = {"http","https"};
+    private UrlValidator urlValidator;
 
     private static class SplitResult {
         String first;
@@ -62,6 +65,7 @@ public class MatcherBolt extends AbstractRedisBolt {
         this.lookup = readCountFromFile();
         this.mapper = new ObjectMapper();
         this.decoder = Base64.getDecoder();
+        this.urlValidator = new UrlValidator(schemes);
     }
 
     private Map<String, Long> readCountFromFile() {
@@ -96,21 +100,31 @@ public class MatcherBolt extends AbstractRedisBolt {
         String encodedURL = input.getStringByField("url");
         byte[] decodedURL = decoder.decode(encodedURL);
         String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
-        String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
-        ack.URL = shortURL;
-        calculate(shortURL);
-        if (saveResult(encodedURL)) {
-            emit(input, encodedURL);
+        if (urlValidator.isValid(schemedUrl)) {
+            String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
+            ack.URL = shortURL;
+            calculate(shortURL);
+            if (saveResult(encodedURL)) {
+                emit(input, encodedURL);
+            } else {
+                collector.fail(input);
+            }
         } else {
+            logger.warn("Invalid URL [{}]. Skipping emission", schemedUrl);
             collector.fail(input);
         }
     }
 
     private void calculate(String schemedUrl) {
         logger.debug("Calculating relatedness for [{}]", schemedUrl);
-        String URL = schemedUrl.split("//")[1];
-        calculateRDurl(URL);
-        calculateREMurl(URL);
+        String[] urlParts = schemedUrl.split("//");
+        if (urlParts.length > 1) {
+            String URL = urlParts[1];
+            calculateRDurl(URL);
+            calculateREMurl(URL);
+        } else {
+            logger.warn("Invalid URL [{}]. Skipping calculation", schemedUrl);
+        }
     }
 
     void calculateRDurl(String URL) {

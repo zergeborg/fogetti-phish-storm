@@ -5,12 +5,14 @@ import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -40,6 +42,9 @@ public abstract class URLSpout extends BaseRichSpout {
 	private JedisPoolConfig config;
     private IAcker acker;
     private Encoder encoder;
+    private Decoder decoder;
+    private String[] schemes = {"http","https"};
+    private UrlValidator urlValidator;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -54,6 +59,8 @@ public abstract class URLSpout extends BaseRichSpout {
 		this.iterator = urllist.listIterator();
         this.acker = buildAcker(collector, config);
         this.encoder = Base64.getEncoder();
+        this.decoder = Base64.getDecoder();
+        this.urlValidator = new UrlValidator(schemes);
 	}
 
     public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config);
@@ -107,10 +114,16 @@ public abstract class URLSpout extends BaseRichSpout {
 	}
 
 	@Override
-	public void fail(Object msgId) {
-		logger.debug("Message [msg={}] failed", msgId);
-		logger.warn("Requeueing [msg={}]", msgId);
-		iterator.add(msgId.toString());
+	public void fail(Object encodedURL) {
+        byte[] decodedURL = decoder.decode(encodedURL.toString());
+        String URL = new String(decodedURL, StandardCharsets.UTF_8);
+		logger.debug("Message [msg={}] failed", URL);
+		if (urlValidator.isValid(URL)) {
+		    logger.warn("Requeueing [msg={}]", URL);
+		    iterator.add(URL.toString());
+		} else {
+		    logger.warn("Skipping invalid URL [msg={}]", URL);
+		}
 	}
 
 }

@@ -231,6 +231,11 @@
 			<artifactId>powermock-api-mockito</artifactId>
 			<version>1.6.5</version>
 		</dependency>
+		<dependency>
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.5.1</version>
+		</dependency>
 	</dependencies>
 	<repositories>
 		<repository>
