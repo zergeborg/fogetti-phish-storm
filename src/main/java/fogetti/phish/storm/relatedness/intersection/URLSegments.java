@@ -55,4 +55,12 @@ public class URLSegments implements Serializable {
 		logger.info("MLDPSTerms[{}]", mldpsTerms.values());
 		return mldpsTerms;
 	}
+	
+	public int count() {
+	    int count = 0;
+	    for (Terms terms : termindex.values()) {
+            count += terms.count();
+        }
+	    return count;
+	}
 }
