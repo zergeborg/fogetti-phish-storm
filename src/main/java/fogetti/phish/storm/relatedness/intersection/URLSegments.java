@@ -18,7 +18,7 @@ public class URLSegments implements Serializable {
 
     private static final long serialVersionUID = 6774105562350012171L;
     private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
-	private static final Map<String, Terms> termindex = new ConcurrentHashMap<>();
+	public final Map<String, Terms> termindex = new ConcurrentHashMap<>();
 
 	public void put(String segment, Terms terms) {
 		if (termindex.containsKey(segment)) {
