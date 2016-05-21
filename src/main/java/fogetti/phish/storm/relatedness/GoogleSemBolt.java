@@ -86,9 +86,14 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
-			collector.emit(input, new Values(terms, segment, encodedURL));
-			logger.debug("Acking [{}]", input);
-			collector.ack(input);
+			if (terms.count() != 0) {
+    			collector.emit(input, new Values(terms, segment, encodedURL));
+    			logger.debug("Acking [{}]", input);
+    			collector.ack(input);
+			} else {
+			    logger.warn("Google trends returned empty result");
+			    collector.fail(input);
+			}
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
