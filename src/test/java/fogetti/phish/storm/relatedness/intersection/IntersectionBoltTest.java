@@ -18,6 +18,8 @@ import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
 import redis.clients.jedis.Jedis;
@@ -91,6 +93,9 @@ public class IntersectionBoltTest {
 
 		// When we send a request to redis
 		when(jedis.exists(anyString())).thenReturn(true);
+		ObjectMapper mapper = new ObjectMapper();
+		String rawSegments = mapper.writeValueAsString(new URLSegments());
+        when(jedis.get(anyString())).thenReturn(rawSegments);
 		OutputCollector collector = mock(OutputCollector.class);
 		bolt.prepare(null, null, collector);
 		bolt.execute(keyword);
@@ -121,7 +126,7 @@ public class IntersectionBoltTest {
 
 		// Then we send a request to bing
 		verify(keyword, atLeast(1)).getStringByField("url");
-		verify(jedis).set(anyString(), anyString());
+		verify(jedis, atLeast(1)).set(anyString(), anyString());
 		verify(collector).ack(keyword);
 	}
 	

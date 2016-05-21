@@ -1,5 +1,6 @@
 package fogetti.phish.storm.relatedness.intersection;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -7,12 +8,16 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.relatedness.AckResult;
 
-public class URLSegments {
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class URLSegments implements Serializable {
 
-	private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
+    private static final long serialVersionUID = 6774105562350012171L;
+    private static final Logger logger = LoggerFactory.getLogger(IntersectionBolt.class);
 	private static final Map<String, Terms> termindex = new ConcurrentHashMap<>();
 
 	public void put(String segment, Terms terms) {
