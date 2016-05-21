@@ -89,7 +89,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private void save(Tuple input, String segment, Terms termset) {
         try (Jedis jedis = (Jedis) getInstance()) {
 	        String key = REDIS_SEGMENT_PREFIX + segment;
-	        if (!jedis.exists(key) && !termset.terms.isEmpty()) {
+	        if (!jedis.exists(key) && termset.count() > 0) {
 	            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
 	            String termString = mapper.writeValueAsString(termset);
 	            jedis.set(key, termString);

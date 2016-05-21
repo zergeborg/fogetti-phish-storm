@@ -70,9 +70,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	public void execute(Tuple input) {
 		String segment = input.getStringByField("word");
 		String encodedURL = input.getStringByField("url");
-		Jedis jedis = null;
-		try {
-			jedis = (Jedis) getInstance();
+		try (Jedis jedis = (Jedis) getInstance()) {
 			String segments = jedis.get(REDIS_SEGMENT_PREFIX + segment);
 			Terms terms = null;
 			if (segments != null) {
@@ -95,8 +93,6 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		} catch (IOException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
-        } finally {
-			returnInstance(jedis);
 		}
 	}
 
@@ -105,7 +101,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		int nextPick = new Random().nextInt(proxyList.size());
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
-		Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(hostAndPort[0],Integer.parseInt(hostAndPort[1])));
+		Proxy proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(hostAndPort[0],Integer.parseInt(hostAndPort[1])));
         Builder builder = new GoogleTrends.Builder(request, proxy, segment)
                 .setHttpClient(buildClient())
                 .setConnectTimeout((int)timeout)

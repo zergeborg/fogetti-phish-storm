@@ -27,15 +27,17 @@ public class JedisListener implements Runnable {
 	@Override
 	public void run() {
 	    logger.info("Subscribing");
-		while (!Thread.currentThread().isInterrupted()) {
-			try (Jedis jedis = (Jedis) container.getInstance()) {
-				List<String> messages = jedis.blpop(0, new String[]{channel});
-				logger.info("Jedis message arrived {}", messages.get(1));
-                callback.onMessage(channel, messages.get(1));
-            } catch (Exception e) {
-                logger.error("Sending intersection callback message failed", e);
-            }
-		}
+        try (Jedis jedis = (Jedis) container.getInstance()) {
+    		while (!Thread.currentThread().isInterrupted()) {
+    			try  {
+    				List<String> messages = jedis.blpop(0, new String[]{channel});
+    				logger.info("Jedis message arrived {}", messages.get(1));
+                    callback.onMessage(channel, messages.get(1));
+                } catch (Exception e) {
+                    logger.error("Sending intersection callback message failed", e);
+                }
+    		}
+        }
 	}
 
 }
