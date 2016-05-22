@@ -31,6 +31,7 @@ import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.Terms;
+import fogetti.phish.storm.exception.QuotaLimitException;
 import okhttp3.OkHttpClient;
 import redis.clients.jedis.Jedis;
 
@@ -87,6 +88,9 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			collector.emit(input, new Values(terms, segment, encodedURL));
 			logger.debug("Acking [{}]", input);
 			collector.ack(input);
+		} catch(QuotaLimitException e) {
+            logger.error("Google Trend request failed", e);
+            collector.fail(input);
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);

@@ -14,6 +14,7 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fogetti.phish.storm.exception.QuotaLimitException;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
 
@@ -41,6 +42,7 @@ public class GoogleTrends {
         Response response = client.newCall(request.Get(query)).execute();
         String html = response.body().string();
         Document doc = Jsoup.parse(html);
+        findError(doc);
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
@@ -60,6 +62,7 @@ public class GoogleTrends {
         Response response = client.newCall(request.Get(query)).execute();
         String html = response.body().string();
         Document doc = Jsoup.parse(html);
+        findError(doc);
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
@@ -70,6 +73,12 @@ public class GoogleTrends {
             }
         }
         return result;
+    }
+
+    private void findError(Document doc) {
+        Elements errorDiv = doc.select(".errorSubTitle");
+        String error = errorDiv.get(0).text();
+        if (error.contains("You have reached your quota limit")) throw new QuotaLimitException();
     }
 
     public static class Builder {
