@@ -3,6 +3,7 @@ package fogetti.phish.storm.integration;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.StormTopology;
+import org.apache.storm.metric.LoggingMetricsConsumer;
 
 public class PhishTopologyRemoteRunner {
 
@@ -18,6 +19,7 @@ public class PhishTopologyRemoteRunner {
 	               new Integer(262144));
 	    config.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE,
 	               new Integer(262144));
+	    config.registerMetricsConsumer(LoggingMetricsConsumer.class, 1);
 		
 		StormSubmitter.submitTopology("phish-storm-topology", config, topology);
 	}
