@@ -12,6 +12,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
@@ -115,8 +116,7 @@ public abstract class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void fail(Object encodedURL) {
-        byte[] decodedURL = decoder.decode(encodedURL.toString());
-        String URL = new String(decodedURL, StandardCharsets.UTF_8);
+        String URL = getEncodedShortURL(encodedURL.toString());
 		logger.debug("Message [msg={}] failed", URL);
 		if (urlValidator.isValid(URL)) {
 		    logger.warn("Requeueing [msg={}]", URL);
@@ -125,5 +125,13 @@ public abstract class URLSpout extends BaseRichSpout {
 		    logger.warn("Skipping invalid URL [msg={}]", URL);
 		}
 	}
+
+    private String getEncodedShortURL(String encodedURL) {
+        byte[] decoded = decoder.decode(encodedURL);
+        String longURL = new String(decoded, StandardCharsets.UTF_8);
+        String URL = StringUtils.substringBeforeLast(longURL, "#");
+        String encodedShortURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+        return encodedShortURL;
+    }
 
 }
