@@ -37,7 +37,7 @@ public class GoogleTrends {
     public Set<Term> topSearches() throws IOException {
         Set<Term> result = new HashSet<>();
         String query
-            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=TOP_QUERIES_0_0", keyword);
+            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=TOP_QUERIES_0_0", keyword);
         Response response = client.newCall(request.Get(query)).execute();
         String html = response.body().string();
         Document doc = Jsoup.parse(html);
@@ -56,7 +56,7 @@ public class GoogleTrends {
     public Set<Term> risingSearches() throws IOException {
         Set<Term> result = new HashSet<>();
         String query
-            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&geo=US&cid=RISING_QUERIES_0_0", keyword);
+            = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=RISING_QUERIES_0_0", keyword);
         Response response = client.newCall(request.Get(query)).execute();
         String html = response.body().string();
         Document doc = Jsoup.parse(html);
