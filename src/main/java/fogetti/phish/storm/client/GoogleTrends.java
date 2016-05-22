@@ -77,6 +77,7 @@ public class GoogleTrends {
 
     private void findError(Document doc) {
         Elements errorDiv = doc.select(".errorSubTitle");
+        if (errorDiv.isEmpty()) return;
         String error = errorDiv.get(0).text();
         if (error.contains("You have reached your quota limit")) throw new QuotaLimitException();
     }
