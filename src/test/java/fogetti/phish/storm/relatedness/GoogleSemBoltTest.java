@@ -29,14 +29,14 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gargoylesoftware.htmlunit.WebClient;
 
 import fogetti.phish.storm.client.IRequest;
-import fogetti.phish.storm.client.OkClientUtil;
 import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
+import fogetti.phish.storm.client.WebClientUtil;
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.SpyingGoogleSemBolt.Builder;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
@@ -112,7 +112,7 @@ public class GoogleSemBoltTest {
         // Given we want to get related words for a keyword
         SpyingGoogleSemBolt bolt = builder
                 .setRequest(mock(IRequest.class))
-                .setClient(OkClientUtil.getMockedClient("ordinary-top-searches.html"))
+                .setClient(WebClientUtil.getMockedWebClient("ordinary-top-searches.html"))
                 .build();
         Tuple keyword = mock(Tuple.class);
         when(keyword.getStringByField("word")).thenReturn(paypal);
@@ -136,7 +136,7 @@ public class GoogleSemBoltTest {
         // Given we want to query Google Related data
         SpyingGoogleSemBolt bolt = builder
                 .setRequest(new ErrorThrowingRequest(new SocketTimeoutException()))
-                .setClient(mock(OkHttpClient.class))
+                .setClient(mock(WebClient.class))
                 .build();
 
         // When the bolt sends a new query to Google
@@ -161,7 +161,7 @@ public class GoogleSemBoltTest {
         // Given we want to query Google Related data
         SpyingGoogleSemBolt bolt = builder
                 .setRequest(mock(IRequest.class))
-                .setClient(OkClientUtil.getMockedClient("ordinary-top-searches.html"))
+                .setClient(WebClientUtil.getMockedWebClient("ordinary-top-searches.html"))
                 .build();
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);

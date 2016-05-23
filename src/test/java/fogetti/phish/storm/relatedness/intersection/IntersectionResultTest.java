@@ -24,9 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.client.IRequest;
-import fogetti.phish.storm.client.OkClientUtil;
 import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
+import fogetti.phish.storm.client.WebClientUtil;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -46,7 +46,7 @@ public class IntersectionResultTest {
     public void setUp() throws Exception {
         request = mock(IRequest.class);
         url = "alma.com";
-        client = OkClientUtil.getMockedClient("alexa-result.xml");
+        client = WebClientUtil.getMockedClient("alexa-result.xml");
     }
 
     private List<Term> termsOf(String... string) {

@@ -4,8 +4,6 @@ import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -26,13 +24,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gargoylesoftware.htmlunit.ProxyConfig;
+import com.gargoylesoftware.htmlunit.WebClient;
 
 import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
 import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.exception.QuotaLimitException;
-import okhttp3.OkHttpClient;
 import redis.clients.jedis.Jedis;
 
 public abstract class GoogleSemBolt extends AbstractRedisBolt {
@@ -65,7 +64,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
         }
 	}
 	
-	public abstract OkHttpClient buildClient();
+	public abstract WebClient buildClient();
 
 	@Override
 	public void execute(Tuple input) {
@@ -105,11 +104,10 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		int nextPick = new Random().nextInt(proxyList.size());
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
-		Proxy proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(hostAndPort[0],Integer.parseInt(hostAndPort[1])));
-        Builder builder = new GoogleTrends.Builder(request, proxy, segment)
+        ProxyConfig proxyConfig = new ProxyConfig(hostAndPort[0],Integer.parseInt(hostAndPort[1]));
+        Builder builder = new GoogleTrends.Builder(proxyConfig, segment)
                 .setHttpClient(buildClient())
-                .setConnectTimeout((int)timeout)
-                .setSocketTimeout((int)timeout);
+                .setConnectTimeout((int)timeout);
 		GoogleTrends client = builder.build();
 		result.add(client.topSearches());
 		result.add(client.risingSearches());

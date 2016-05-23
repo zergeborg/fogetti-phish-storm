@@ -1,10 +1,8 @@
 package fogetti.phish.storm.client;
 
 import java.io.IOException;
-import java.net.Proxy;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
 import org.jsoup.Jsoup;
@@ -14,33 +12,39 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.gargoylesoftware.htmlunit.BrowserVersion;
+import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
+import com.gargoylesoftware.htmlunit.Page;
+import com.gargoylesoftware.htmlunit.ProxyConfig;
+import com.gargoylesoftware.htmlunit.TextPage;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
 import fogetti.phish.storm.exception.QuotaLimitException;
-import okhttp3.OkHttpClient;
-import okhttp3.Response;
 
 public class GoogleTrends {
 
     private static final Logger logger = LoggerFactory.getLogger(GoogleTrends.class);
 
     private final String keyword;
-    private final IRequest request;
-    private final OkHttpClient client;
+    private final WebClient webClient;
+    private final ProxyConfig proxyConfig;
 
-    private GoogleTrends(OkHttpClient client, IRequest request, String keyword) {
-        if (client == null) {
+
+    private GoogleTrends(WebClient webClient, String keyword, ProxyConfig proxy) {
+        if (webClient == null) {
             throw new NullPointerException();
         }
-        this.client = client;
-        this.request = request;
+        this.webClient = webClient;
         this.keyword = keyword;
+        this.proxyConfig = proxy;
     }
 
     public Set<Term> topSearches() throws IOException {
         Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=TOP_QUERIES_0_0", keyword);
-        Response response = client.newCall(request.Get(query)).execute();
-        String html = response.body().string();
+        String html = buildHtml(query);
         Document doc = Jsoup.parse(html);
         findError(doc);
         Elements mainElem = doc.select(".trends-table-data");
@@ -59,8 +63,7 @@ public class GoogleTrends {
         Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=RISING_QUERIES_0_0", keyword);
-        Response response = client.newCall(request.Get(query)).execute();
-        String html = response.body().string();
+        String html = buildHtml(query);
         Document doc = Jsoup.parse(html);
         findError(doc);
         Elements mainElem = doc.select(".trends-table-data");
@@ -75,6 +78,30 @@ public class GoogleTrends {
         return result;
     }
 
+    private String buildHtml(String query) throws IOException {
+        webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+        webClient.getOptions().setTimeout(60000);
+        webClient.getOptions().setProxyConfig(proxyConfig);
+        webClient.getOptions().setThrowExceptionOnScriptError(false);
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        webClient.getOptions().setCssEnabled(true);
+        webClient.getOptions().setRedirectEnabled(true);
+        Page page = webClient.getPage(query);
+
+        webClient.waitForBackgroundJavaScript(10000);
+        webClient.waitForBackgroundJavaScriptStartingBefore(10000);
+
+        if (page.isHtmlPage()) {
+            final HtmlPage htmlPage = (HtmlPage) page;
+            final String html = htmlPage.asXml();
+            return html;
+        } else {
+            final TextPage textPage = (TextPage) page;
+            final String html = textPage.getContent();
+            return html;
+        }
+    }
+
     private void findError(Document doc) {
         Elements errorDiv = doc.select(".errorSubTitle");
         if (errorDiv.isEmpty()) return;
@@ -84,24 +111,21 @@ public class GoogleTrends {
 
     public static class Builder {
 
-        private final Proxy proxy;
         private final String keyword;
-        private final IRequest request;
+        private final ProxyConfig proxyConfig;
         private Integer connectTimeout = 5000;
-        private Integer socketTimeout = 5000;
-        private OkHttpClient client = null;
+        private WebClient webClient;
 
-        public Builder(IRequest request, Proxy proxy, String keyword) {
-            if (request == null || proxy == null || keyword == null) {
+        public Builder(ProxyConfig proxyConfig, String keyword) {
+            if (proxyConfig == null || keyword == null) {
                 throw new NullPointerException();
             }
-            this.request = request;
-            this.proxy = proxy;
+            this.proxyConfig = proxyConfig;
             this.keyword = keyword;
         }
 
-        public Builder setHttpClient(OkHttpClient client) {
-            this.client = client;
+        public Builder setHttpClient(WebClient client) {
+            this.webClient = client;
             return this;
         }
         
@@ -110,27 +134,22 @@ public class GoogleTrends {
             return this;
         }
         
-        public Builder setSocketTimeout(Integer socketTimeout) {
-            this.socketTimeout = socketTimeout;
-            return this;
-        }
-        
-        private OkHttpClient buildClient() {
-            if (client == null) {
-                client = new OkHttpClient
-                        .Builder()
-                        .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
-                        .readTimeout(socketTimeout, TimeUnit.MILLISECONDS)
-                        .writeTimeout(socketTimeout, TimeUnit.MILLISECONDS)
-                        .proxy(proxy)
-                        .build();
-
+        private WebClient buildClient() {
+            if (webClient == null) {
+                webClient = new WebClient(BrowserVersion.FIREFOX_38);
+                webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+                webClient.getOptions().setTimeout(connectTimeout);
+                webClient.getOptions().setProxyConfig(proxyConfig);
+                webClient.getOptions().setThrowExceptionOnScriptError(false);
+                webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+                webClient.getOptions().setCssEnabled(true);
+                webClient.getOptions().setRedirectEnabled(true);
             }
-            return client;
+            return webClient;
         }        
 
         public GoogleTrends build() {
-            return new GoogleTrends(buildClient(), request, keyword);
+            return new GoogleTrends(buildClient(), keyword, proxyConfig);
         }
     }
 

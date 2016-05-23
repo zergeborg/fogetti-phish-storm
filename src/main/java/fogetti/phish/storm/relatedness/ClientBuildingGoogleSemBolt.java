@@ -1,12 +1,14 @@
 package fogetti.phish.storm.relatedness;
 
 import java.io.File;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 
+import com.gargoylesoftware.htmlunit.BrowserVersion;
+import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
+import com.gargoylesoftware.htmlunit.WebClient;
+
 import fogetti.phish.storm.client.IRequest;
-import okhttp3.OkHttpClient;
 
 public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
 
@@ -17,15 +19,15 @@ public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
     }
 
     @Override
-    public OkHttpClient buildClient() {
-        OkHttpClient client
-            = new OkHttpClient
-                .Builder()
-                .connectTimeout(timeout, TimeUnit.MILLISECONDS)
-                .readTimeout(timeout, TimeUnit.MILLISECONDS)
-                .writeTimeout(timeout, TimeUnit.MILLISECONDS)
-                .build();
-        return client;
+    public WebClient buildClient() {
+        WebClient webClient = new WebClient(BrowserVersion.FIREFOX_38);
+        webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+        webClient.getOptions().setTimeout((int)timeout);
+        webClient.getOptions().setThrowExceptionOnScriptError(false);
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        webClient.getOptions().setCssEnabled(true);
+        webClient.getOptions().setRedirectEnabled(true);
+        return webClient;
     }
 
 }
