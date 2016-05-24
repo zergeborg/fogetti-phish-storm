@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -38,6 +39,9 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
+	private final int METRICS_WINDOW = 60;
+	private transient CountMetric googleTrendSuccess;
+	private transient CountMetric googleTrendFailure;
     private final File proxies;
     private List<String> proxyList;
     private ObjectMapper mapper;
@@ -64,6 +68,14 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
         } catch (IOException e) {
             logger.error("Preparing the Google SEM bolt failed", e);
         }
+		googleTrendSuccess = new CountMetric();
+		context.registerMetric("google-trends-success",
+		                       googleTrendSuccess,
+		                       METRICS_WINDOW);
+		googleTrendFailure = new CountMetric();
+		context.registerMetric("google-trends-failures",
+		                       googleTrendFailure,
+		                       METRICS_WINDOW);
 	}
 	
 	public abstract WebClient buildClient();
@@ -83,6 +95,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			if (terms == null || terms.terms == null || terms.terms.isEmpty()) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				terms = calculateSearches(segment);
+				googleTrendSuccess.incr();
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
 			}
@@ -101,6 +114,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		    } else {
 		        logger.error("Google Trend request failed [reason={}]", e.getMessage());
 		    }
+		    googleTrendFailure.incr();
             collector.fail(input);
 		}
 	}

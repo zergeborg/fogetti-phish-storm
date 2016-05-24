@@ -19,6 +19,7 @@ import java.util.Map;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -99,7 +100,7 @@ public class GoogleSemBoltTest {
         OutputCollector collector = mock(OutputCollector.class);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
-        bolt.prepare(config, null, collector);
+        bolt.prepare(config, mock(TopologyContext.class), collector);
         bolt.execute(keyword);
 
         // Then it returns a cached segment
@@ -122,7 +123,7 @@ public class GoogleSemBoltTest {
         OutputCollector collector = mock(OutputCollector.class);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
-        bolt.prepare(config, null, collector);
+        bolt.prepare(config, mock(TopologyContext.class), collector);
         bolt.execute(keyword);
 
         // Then we send a request to Google
@@ -147,7 +148,7 @@ public class GoogleSemBoltTest {
         OutputCollector spy = spy(collector);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
-        bolt.prepare(config, null, spy);
+        bolt.prepare(config, mock(TopologyContext.class), spy);
         bolt.execute(input);
 
         // Then it fails
@@ -167,7 +168,7 @@ public class GoogleSemBoltTest {
         OutputCollector spy = spy(collector);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
-        bolt.prepare(config, null, spy);
+        bolt.prepare(config, mock(TopologyContext.class), spy);
 
         // When the bolt sends a new query to Google and succeeds
         Tuple input = mock(Tuple.class);

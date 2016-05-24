@@ -49,6 +49,13 @@ public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
             return builder;
         }
         
+        @Override
+        protected HttpClientBuilder createHttpClient() {
+            HttpClientBuilder builder = super.createHttpClient();
+            builder.setRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
+            return builder;
+        }
+        
     }
 
 }
