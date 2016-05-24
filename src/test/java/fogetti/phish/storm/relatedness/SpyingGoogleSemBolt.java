@@ -20,7 +20,7 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
     private final WebClient client;
 
     private SpyingGoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request, JedisCommands jedis, WebClient client) {
-        super(config, proxies, request);
+        super(config, proxies);
         this.jedis = jedis;
         this.client = client;
     }

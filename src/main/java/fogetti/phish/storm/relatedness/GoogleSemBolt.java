@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Level;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
@@ -29,7 +30,6 @@ import com.gargoylesoftware.htmlunit.WebClient;
 
 import fogetti.phish.storm.client.GoogleTrends;
 import fogetti.phish.storm.client.GoogleTrends.Builder;
-import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.exception.QuotaLimitException;
 import redis.clients.jedis.Jedis;
@@ -39,15 +39,17 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
     private final File proxies;
-    private final IRequest request;
     private List<String> proxyList;
     private ObjectMapper mapper;
     protected long timeout;
+    
+    static {
+        java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(Level.INFO); 
+    }
 
-	public GoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request) {
+	public GoogleSemBolt(JedisPoolConfig config, File proxies) {
 		super(config);
         this.proxies = proxies;
-        this.request = request;
         this.proxyList = new ArrayList<>();
 	}
 
@@ -94,7 +96,11 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
 		} catch (IOException e) {
-            logger.error("Google Trend request failed", e);
+		    if (e.getMessage() == null) {
+                logger.error("Google Trend request failed", e);
+		    } else {
+		        logger.error("Google Trend request failed [reason={}]", e.getMessage());
+		    }
             collector.fail(input);
 		}
 	}

@@ -52,8 +52,10 @@ public class GoogleTrends {
             Element table = mainElem.get(0);
             for (Element row : table.select("tr")) {
                 Elements tds = row.select("td > span:first-child");
-                String text = tds.get(0).text();
-                if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
+                if (!tds.isEmpty()) {
+                    String text = tds.get(0).text();
+                    if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
+                }
             }
         }
         return result;
@@ -71,8 +73,10 @@ public class GoogleTrends {
             Element table = mainElem.get(0);
             for (Element row : table.select("tr")) {
                 Elements tds = row.select("td > span:first-child");
-                String text = tds.get(0).text();
-                if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
+                if (!tds.isEmpty()) {
+                    String text = tds.get(0).text();
+                    if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
+                }
             }
         }
         return result;

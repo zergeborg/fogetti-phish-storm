@@ -14,6 +14,7 @@ public class PhishTopologyLocalRunner {
 	public static void run(String[] args, StormTopology topology)
 			throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
 		Config conf = new Config();
+		conf.setMessageTimeoutSecs(90);
 		if (args != null && args.length > 0) {
 			runWithProgressbar(args, topology, conf);
 		}
@@ -31,7 +32,7 @@ public class PhishTopologyLocalRunner {
 	private static void runSimply(StormTopology topology, Config conf) {
 		LocalCluster cluster = new LocalCluster();
 		cluster.submitTopology("test", conf, topology);
-		Utils.sleep(180000);
+		Utils.sleep(300000);
 		cluster.killTopology("test");
 		cluster.shutdown();
 	}

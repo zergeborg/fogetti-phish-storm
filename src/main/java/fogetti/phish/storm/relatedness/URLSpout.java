@@ -3,14 +3,13 @@ package fogetti.phish.storm.relatedness;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -38,7 +37,6 @@ public abstract class URLSpout extends BaseRichSpout {
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 	private SpoutOutputCollector collector;
 	private List<String> urllist;
-	private ListIterator<String> iterator;
 	private String urlDataFile;
 	private JedisPoolConfig config;
     private IAcker acker;
@@ -57,7 +55,6 @@ public abstract class URLSpout extends BaseRichSpout {
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
 		this.urllist = readURLListFromFile();
-		this.iterator = urllist.listIterator();
         this.acker = buildAcker(collector, config);
         this.encoder = Base64.getEncoder();
         this.decoder = Base64.getDecoder();
@@ -67,7 +64,7 @@ public abstract class URLSpout extends BaseRichSpout {
     public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config);
 
 	private List<String> readURLListFromFile() {
-		List<String> urls = new ArrayList<>();
+		List<String> urls = new CopyOnWriteArrayList<>();
 		loadUrls(urls);
 		return urls;
 	}
@@ -86,13 +83,8 @@ public abstract class URLSpout extends BaseRichSpout {
 	@Override
 	public void nextTuple() {
 		// Check the case when we read first seen elements
-		if (iterator.hasNext()) {
-			String URLWithScheme = iterator.next();
-			doNextTuple(URLWithScheme);
-		}
-		// Check the case when we read failed elements
-		else if (iterator.hasPrevious()) {
-			String URLWithScheme = iterator.previous();
+		if (!urllist.isEmpty()) {
+			String URLWithScheme = urllist.remove(0);
 			doNextTuple(URLWithScheme);
 		}
 	}
@@ -116,22 +108,21 @@ public abstract class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void fail(Object encodedURL) {
-        String URL = getEncodedShortURL(encodedURL.toString());
+        String URL = getURL(encodedURL.toString());
 		logger.debug("Message [msg={}] failed", URL);
 		if (urlValidator.isValid(URL)) {
 		    logger.warn("Requeueing [msg={}]", URL);
-		    iterator.add(URL.toString());
+		    urllist.add(URL.toString());
 		} else {
 		    logger.warn("Skipping invalid URL [msg={}]", URL);
 		}
 	}
 
-    private String getEncodedShortURL(String encodedURL) {
+    private String getURL(String encodedURL) {
         byte[] decoded = decoder.decode(encodedURL);
         String longURL = new String(decoded, StandardCharsets.UTF_8);
         String URL = StringUtils.substringBeforeLast(longURL, "#");
-        String encodedShortURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
-        return encodedShortURL;
+        return URL;
     }
 
 }

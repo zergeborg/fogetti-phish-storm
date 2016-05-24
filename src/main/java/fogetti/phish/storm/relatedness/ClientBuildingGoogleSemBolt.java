@@ -15,7 +15,7 @@ public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
     private static final long serialVersionUID = -8280832599330302218L;
 
     public ClientBuildingGoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request) {
-        super(config, proxies, request);
+        super(config, proxies);
     }
 
     @Override
