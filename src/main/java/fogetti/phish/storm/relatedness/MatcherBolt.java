@@ -96,21 +96,26 @@ public class MatcherBolt extends AbstractRedisBolt {
 
     @Override
     public void execute(Tuple input) {
-        ack = new AckResult();
-        String encodedURL = input.getStringByField("url");
-        byte[] decodedURL = decoder.decode(encodedURL);
-        String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
-        if (urlValidator.isValid(schemedUrl)) {
-            String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
-            ack.URL = shortURL;
-            calculate(shortURL);
-            if (saveResult(encodedURL)) {
-                emit(input, encodedURL);
+        try {
+            ack = new AckResult();
+            String encodedURL = input.getStringByField("url");
+            byte[] decodedURL = decoder.decode(encodedURL);
+            String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
+            if (urlValidator.isValid(schemedUrl)) {
+                String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
+                ack.URL = shortURL;
+                calculate(shortURL);
+                if (saveResult(encodedURL)) {
+                    emit(input, encodedURL);
+                } else {
+                    collector.fail(input);
+                }
             } else {
+                logger.warn("Invalid URL [{}]. Skipping emission", schemedUrl);
                 collector.fail(input);
             }
-        } else {
-            logger.warn("Invalid URL [{}]. Skipping emission", schemedUrl);
+        } catch(Exception e) {
+            logger.error("Unexpected error", e);
             collector.fail(input);
         }
     }
