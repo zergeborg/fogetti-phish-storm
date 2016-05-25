@@ -50,6 +50,8 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric ackedSaved;
     private transient CountMetric ackedSkipped;
     private transient CountMetric ackedRetried;
+    private transient CountMetric spoutAcked;
+    private transient CountMetric spoutFailed;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -79,6 +81,14 @@ public abstract class URLSpout extends BaseRichSpout {
         ackedRetried = new CountMetric();
         context.registerMetric("acked-retried",
                                ackedRetried,
+                               METRICS_WINDOW);
+        spoutAcked = new CountMetric();
+        context.registerMetric("spout-acked",
+                               spoutAcked,
+                               METRICS_WINDOW);
+        spoutFailed = new CountMetric();
+        context.registerMetric("spout-failed",
+                               spoutFailed,
                                METRICS_WINDOW);
         this.acker = buildAcker(collector, config, ackedPublished, ackedSaved, ackedSkipped, ackedRetried);
 	}
@@ -126,6 +136,7 @@ public abstract class URLSpout extends BaseRichSpout {
 	public void ack(Object encodedURL) {
 	    logger.info("Acking [{}]", encodedURL);
 	    acker.enqueue(encodedURL.toString());
+	    spoutAcked.incr();
 	}
 
 	@Override
@@ -138,6 +149,7 @@ public abstract class URLSpout extends BaseRichSpout {
 		} else {
 		    logger.warn("Skipping invalid URL [msg={}]", URL);
 		}
+		spoutFailed.incr();
 	}
 
     private String getURL(String encodedURL) {
