@@ -42,6 +42,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	private final int METRICS_WINDOW = 60;
 	private transient CountMetric googleTrendSuccess;
 	private transient CountMetric googleTrendFailure;
+    private transient CountMetric googleTrendOverLimit;
     private final File proxies;
     private List<String> proxyList;
     private ObjectMapper mapper;
@@ -76,6 +77,10 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		context.registerMetric("google-trends-failures",
 		                       googleTrendFailure,
 		                       METRICS_WINDOW);
+		googleTrendOverLimit = new CountMetric();
+        context.registerMetric("google-trends-over-limit",
+                               googleTrendOverLimit,
+                               METRICS_WINDOW);
 	}
 	
 	public abstract WebClient buildClient();
@@ -105,6 +110,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		} catch(QuotaLimitException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
+            googleTrendOverLimit.incr();
         } catch (NullPointerException e) {
             logger.error("Google Trend request failed", e);
             collector.fail(input);
