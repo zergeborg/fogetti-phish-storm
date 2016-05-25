@@ -90,17 +90,17 @@ public class AsynchronousAcker implements Runnable, IAcker {
 
     @Override
     public void enqueue(String msgId) {
-        try {
-            if (!saved(msgId)) {
-                msgQ.put(msgId);
-            } else {
-                logger.warn("Message already saved [msgId={}]. Skipping", msgId);
-                ackedSkipped.incr();
-            }
-        } catch (InterruptedException e) {
-            logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
-            Thread.currentThread().interrupt();
-        }
+//        try {
+//            if (!saved(msgId)) {
+//                msgQ.put(msgId);
+//            } else {
+//                logger.warn("Message already saved [msgId={}]. Skipping", msgId);
+//                ackedSkipped.incr();
+//            }
+//        } catch (InterruptedException e) {
+//            logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
+//            Thread.currentThread().interrupt();
+//        }
     }
 
     private boolean saved(String msgId) {
@@ -124,36 +124,34 @@ public class AsynchronousAcker implements Runnable, IAcker {
 
     @Override
     public void run() {
-        try (Jedis jedis = (Jedis) getInstance()) {
-            while (!Thread.currentThread().isInterrupted()) {
+        while (!Thread.currentThread().isInterrupted()) {
+            try (Jedis jedis = (Jedis) getInstance()) {
+                String msgId = msgQ.take();
+                logger.info("Acking enqueued message [{}]", msgId);
+                AckResult result = null;
                 try {
-                    String msgId = msgQ.take();
-                    logger.info("Acking enqueued message [{}]", msgId);
-                    AckResult result = null;
-                    try {
-                        List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId});
-                        if (messages != null) {
-                            result = mapper.readValue(messages.get(1), AckResult.class);
-                        } else {
-                            logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
-                            retry.enqueue(msgId);
-                            ackedRetried.incr();
-                            continue;
-                        }
-                        if (result != null) {
-                            String msg = mapper.writeValueAsString(result);
-                            publish("phish", msg, jedis);
-                            save(msgId, jedis);
-                        }
-                    } catch (IOException e) {
+                    List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId});
+                    if (messages != null) {
+                        result = mapper.readValue(messages.get(1), AckResult.class);
+                    } else {
                         logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
                         retry.enqueue(msgId);
                         ackedRetried.incr();
+                        continue;
                     }
-                } catch (InterruptedException e) {
-                    logger.error("Acking asynchronously failed", e);
-                    Thread.currentThread().interrupt();
+                    if (result != null) {
+                        String msg = mapper.writeValueAsString(result);
+                        publish("phish", msg, jedis);
+                        save(msgId, jedis);
+                    }
+                } catch (IOException e) {
+                    logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
+                    retry.enqueue(msgId);
+                    ackedRetried.incr();
                 }
+            } catch (InterruptedException e) {
+                logger.error("Acking asynchronously failed", e);
+                Thread.currentThread().interrupt();
             }
         }
     }

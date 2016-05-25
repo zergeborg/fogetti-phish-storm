@@ -146,7 +146,7 @@ public abstract class URLSpout extends BaseRichSpout {
 		logger.debug("Message [msg={}] failed", URL);
 		if (urlValidator.isValid(URL)) {
 		    logger.warn("Requeueing [msg={}]", URL);
-		    urllist.add(URL.toString());
+		    urllist.add(URL);
 		} else {
 		    logger.warn("Skipping invalid URL [msg={}]", URL);
 		}
