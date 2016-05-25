@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -44,6 +45,11 @@ public abstract class URLSpout extends BaseRichSpout {
     private Decoder decoder;
     private String[] schemes = {"http","https"};
     private UrlValidator urlValidator;
+    private final int METRICS_WINDOW = 60;
+    private transient CountMetric ackedPublished;
+    private transient CountMetric ackedSaved;
+    private transient CountMetric ackedSkipped;
+    private transient CountMetric ackedRetried;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -55,13 +61,29 @@ public abstract class URLSpout extends BaseRichSpout {
 	public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 		this.collector = collector;
 		this.urllist = readURLListFromFile();
-        this.acker = buildAcker(collector, config);
         this.encoder = Base64.getEncoder();
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
+        ackedPublished = new CountMetric();
+        context.registerMetric("acked-published",
+                               ackedPublished,
+                               METRICS_WINDOW);
+        ackedSaved = new CountMetric();
+        context.registerMetric("akced-saved",
+                               ackedSaved,
+                               METRICS_WINDOW);
+        ackedSkipped = new CountMetric();
+        context.registerMetric("acked-skipped",
+                               ackedSkipped,
+                               METRICS_WINDOW);
+        ackedRetried = new CountMetric();
+        context.registerMetric("acked-retried",
+                               ackedRetried,
+                               METRICS_WINDOW);
+        this.acker = buildAcker(collector, config, ackedPublished, ackedSaved, ackedSkipped, ackedRetried);
 	}
 
-    public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config);
+    public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried);
 
 	private List<String> readURLListFromFile() {
 		List<String> urls = new CopyOnWriteArrayList<>();

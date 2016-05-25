@@ -14,8 +14,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
+import org.apache.storm.task.TopologyContext;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,7 +85,7 @@ public class URLSpoutTest {
 		}
 
         @Override
-        public IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
+        public IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried) {
             return new SynchronousAcker(collector, config);
         }
 	}
@@ -104,7 +106,7 @@ public class URLSpoutTest {
 		// Given we want to measure relatedness in an URL
         URLSpout spout = new TestDoubleURLSpout(urlDataFile, config);
 		SpoutOutputCollector spy = getSpy();
-		spout.open(null, null, spy);
+		spout.open(null, mock(TopologyContext.class), spy);
 
 		// When we call nextTuple
 		spout.nextTuple();
@@ -118,7 +120,7 @@ public class URLSpoutTest {
 	public void sameURLsInAckIndex() throws Exception {
         URLSpout spout = new TestDoubleURLSpout(urlDataFile, config);
 		SpoutOutputCollector spy = getSpy();
-		spout.open(null, null, spy);
+		spout.open(null, mock(TopologyContext.class), spy);
 		String sezo1 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
 		String sezo2 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
 		String sezo3 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
@@ -142,7 +144,7 @@ public class URLSpoutTest {
 		// Given we want to measure relatedness in different URLs multiple times
 		URLSpout spout = new TestDoubleURLSpout(urlDataFile, config);
 		SpoutOutputCollector spy = getSpy();
-		spout.open(null, null, spy);
+		spout.open(null, mock(TopologyContext.class), spy);
 		String url1 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
 		String url2 = "www.smbctb.co.jp/JPGCB/JPS/portal/SignonLocaleSwitch.do?locale=en_JP";
 		String url3 = "tracking.binarypromos.com/aff_c?offer_id=1923&aff_id=5052&aff_sub=3014860850&aff_sub5=header";

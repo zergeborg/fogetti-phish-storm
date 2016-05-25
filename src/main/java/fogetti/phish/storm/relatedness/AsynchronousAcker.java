@@ -6,10 +6,11 @@ import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
 import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
@@ -28,16 +29,20 @@ public class AsynchronousAcker implements Runnable, IAcker {
     private static final Logger logger = LoggerFactory.getLogger(AsynchronousAcker.class);
     private final JedisCommandsInstanceContainer container;
     private final ObjectMapper mapper = new ObjectMapper();
-    private final BlockingQueue<String> msgQ = new PriorityBlockingQueue<>();
+    private final BlockingQueue<String> msgQ = new ArrayBlockingQueue<>(2000);
     private final Decoder decoder = Base64.getDecoder();
     private final Encoder encoder = Base64.getEncoder();
     private final RetryQueue retry;
+    private final CountMetric ackedPublished;
+    private final CountMetric ackedSaved;
+    private final CountMetric ackedSkipped;
+    private final CountMetric ackedRetried;
     
     private static class RetryQueue implements Runnable {
 
         private static final Logger logger = LoggerFactory.getLogger(RetryQueue.class);
         private final AsynchronousAcker acker;
-        private final BlockingQueue<String> retryQ = new PriorityBlockingQueue<>();
+        private final BlockingQueue<String> retryQ = new ArrayBlockingQueue<>(2000);
         
         public RetryQueue(AsynchronousAcker acker) {
             this.acker = acker;
@@ -67,7 +72,17 @@ public class AsynchronousAcker implements Runnable, IAcker {
         
     }
 
-    public AsynchronousAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
+    public AsynchronousAcker(
+            SpoutOutputCollector collector,
+            JedisPoolConfig config,
+            CountMetric ackedPublished,
+            CountMetric ackedSaved,
+            CountMetric ackedSkipped,
+            CountMetric ackedRetried) {
+        this.ackedPublished = ackedPublished;
+        this.ackedSaved = ackedSaved;
+        this.ackedSkipped = ackedSkipped;
+        this.ackedRetried = ackedRetried;
         this.container = JedisCommandsContainerBuilder.build(config);
         this.retry = new RetryQueue(this);
         new Thread(this.retry, "retryThread").start();
@@ -78,6 +93,9 @@ public class AsynchronousAcker implements Runnable, IAcker {
         try {
             if (!saved(msgId)) {
                 msgQ.put(msgId);
+            } else {
+                logger.warn("Message already saved [msgId={}]. Skipping", msgId);
+                ackedSkipped.incr();
             }
         } catch (InterruptedException e) {
             logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
@@ -119,6 +137,7 @@ public class AsynchronousAcker implements Runnable, IAcker {
                         } else {
                             logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
                             retry.enqueue(msgId);
+                            ackedRetried.incr();
                             continue;
                         }
                         if (result != null) {
@@ -129,6 +148,7 @@ public class AsynchronousAcker implements Runnable, IAcker {
                     } catch (IOException e) {
                         logger.warn("Could not look up AckResult related to {}. Requeueing.", msgId);
                         retry.enqueue(msgId);
+                        ackedRetried.incr();
                     }
                 } catch (InterruptedException e) {
                     logger.error("Acking asynchronously failed", e);
@@ -142,12 +162,14 @@ public class AsynchronousAcker implements Runnable, IAcker {
         PublishMessage message = new PublishMessage(channel, msg);
         logger.info("Publishing [Message={}]", message.msg);
         jedis.rpush(message.channel, message.msg);
+        ackedPublished.incr();
     }
 
     private void save(String msgId, Jedis jedis) {
         String encodedURL = getEncodedURL(msgId);
         logger.info("Saving [msgId={}]", encodedURL);
         jedis.rpush("saved:"+encodedURL, encodedURL);
+        ackedSaved.incr();
     }
 
     /**
