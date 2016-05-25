@@ -6,10 +6,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -37,7 +37,7 @@ public abstract class URLSpout extends BaseRichSpout {
 	private static final long serialVersionUID = -6424905468176142975L;
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
 	private SpoutOutputCollector collector;
-	private List<String> urllist;
+	private TreeSet<String> urllist;
 	private String urlDataFile;
 	private JedisPoolConfig config;
     private IAcker acker;
@@ -95,13 +95,13 @@ public abstract class URLSpout extends BaseRichSpout {
 
     public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried);
 
-	private List<String> readURLListFromFile() {
-		List<String> urls = new CopyOnWriteArrayList<>();
+	private TreeSet<String> readURLListFromFile() {
+	    TreeSet<String> urls = new TreeSet<>();
 		loadUrls(urls);
 		return urls;
 	}
 
-	private void loadUrls(List<String> urls) {
+	private void loadUrls(Set<String> urls) {
 		try(Scanner scanner = new Scanner(new FileReader(urlDataFile));) {
 			while (scanner.hasNextLine()) {
 				urls.add(scanner.nextLine());
@@ -116,7 +116,8 @@ public abstract class URLSpout extends BaseRichSpout {
 	public void nextTuple() {
 		// Check the case when we read first seen elements
 		if (!urllist.isEmpty()) {
-			String URLWithScheme = urllist.remove(0);
+			String URLWithScheme = urllist.last();
+			urllist.remove(URLWithScheme);
 			doNextTuple(URLWithScheme);
 		}
 	}
