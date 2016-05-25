@@ -90,17 +90,17 @@ public class AsynchronousAcker implements Runnable, IAcker {
 
     @Override
     public void enqueue(String msgId) {
-//        try {
-//            if (!saved(msgId)) {
-//                msgQ.put(msgId);
-//            } else {
-//                logger.warn("Message already saved [msgId={}]. Skipping", msgId);
-//                ackedSkipped.incr();
-//            }
-//        } catch (InterruptedException e) {
-//            logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
-//            Thread.currentThread().interrupt();
-//        }
+        try {
+            if (!saved(msgId)) {
+                msgQ.put(msgId);
+            } else {
+                logger.warn("Message already saved [msgId={}]. Skipping", msgId);
+                ackedSkipped.incr();
+            }
+        } catch (InterruptedException e) {
+            logger.warn("Could not enqueue [{}] because the process got interupted", msgId);
+            Thread.currentThread().interrupt();
+        }
     }
 
     private boolean saved(String msgId) {
