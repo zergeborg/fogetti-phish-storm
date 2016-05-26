@@ -72,15 +72,15 @@ public class MatcherBolt extends AbstractRedisBolt {
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
         matcherEmittedRDSegment = new CountMetric();
-        context.registerMetric("matcher-emitted-rd-segment",
+        context.registerMetric("match-emitted-rd-segment",
                                matcherEmittedRDSegment,
                                METRICS_WINDOW);
         matcherEmittedREMSegment = new CountMetric();
-        context.registerMetric("matcher-emitted-rem-segment",
+        context.registerMetric("match-emitted-rem-segment",
                                matcherEmittedREMSegment,
                                METRICS_WINDOW);
         matcherAckedCnt = new CountMetric();
-        context.registerMetric("matcher-acked-cnt",
+        context.registerMetric("match-acked-cnt",
                                matcherAckedCnt,
                                METRICS_WINDOW);
     }

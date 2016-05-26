@@ -47,7 +47,7 @@ public abstract class URLSpout extends BaseRichSpout {
     private Decoder decoder;
     private String[] schemes = {"http","https"};
     private UrlValidator urlValidator;
-    private final int METRICS_WINDOW = 60;
+    private final int METRICS_WINDOW = 10;
     private transient CountMetric ackedPublished;
     private transient CountMetric ackedSaved;
     private transient CountMetric ackedSkipped;
@@ -126,7 +126,7 @@ public abstract class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void nextTuple() {
-	    spoutListSize.update((Integer)urllist.size());
+	    spoutListSize.update(urllist.size());
 		if (!urllist.isEmpty()) {
 			String URLWithScheme = urllist.last();
 			urllist.remove(URLWithScheme);

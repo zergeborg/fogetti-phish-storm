@@ -79,43 +79,43 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		this.encoder = Base64.getEncoder();
 		this.mapper = new ObjectMapper();
         intersectionSegmentSaved = new CountMetric();
-        context.registerMetric("intersection-segment-saved",
+        context.registerMetric("int-segment-saved",
                                intersectionSegmentSaved,
                                METRICS_WINDOW);
         intersectionSegmentSkipped = new CountMetric();
-        context.registerMetric("intersection-segment-skipped",
+        context.registerMetric("int-segment-skipped",
                                intersectionSegmentSkipped,
                                METRICS_WINDOW);
         intersectionIndexKeyUpdated = new CountMetric();
-        context.registerMetric("intersection-index-key-updated",
+        context.registerMetric("int-index-key-updated",
                                intersectionIndexKeyUpdated,
                                METRICS_WINDOW);
         intersectionIndexKeyCreated = new CountMetric();
-        context.registerMetric("intersection-index-key-created",
+        context.registerMetric("int-index-key-created",
                                intersectionIndexKeyCreated,
                                METRICS_WINDOW);
         intersectionMsgLookupSuccess = new CountMetric();
-        context.registerMetric("intersection-msg-lookup-success",
+        context.registerMetric("int-msg-lookup-success",
                                intersectionMsgLookupSuccess,
                                METRICS_WINDOW);
         intersectionMsgLookupFailure = new CountMetric();
-        context.registerMetric("intersection-msg-lookup-failure",
+        context.registerMetric("int-msg-lookup-failure",
                                intersectionMsgLookupFailure,
                                METRICS_WINDOW);
         intersectionActionPerformed = new CountMetric();
-        context.registerMetric("intersection-action-performed",
+        context.registerMetric("int-action-performed",
                                intersectionActionPerformed,
                                METRICS_WINDOW);
         intersectionActionSkipped = new CountMetric();
-        context.registerMetric("intersection-action-skipped",
+        context.registerMetric("int-action-skipped",
                                intersectionActionSkipped,
                                METRICS_WINDOW);
         intersectionActionLogged = new CountMetric();
-        context.registerMetric("intersection-action-logged",
+        context.registerMetric("int-action-logged",
                                intersectionActionLogged,
                                METRICS_WINDOW);
         intersectionActionSaved = new CountMetric();
-        context.registerMetric("intersection-action-saved",
+        context.registerMetric("int-action-saved",
                                intersectionActionSaved,
                                METRICS_WINDOW);
 	}
