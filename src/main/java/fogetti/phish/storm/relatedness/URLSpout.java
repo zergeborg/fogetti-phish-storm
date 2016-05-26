@@ -14,6 +14,8 @@ import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.storm.metric.api.CountMetric;
+import org.apache.storm.metric.api.IReducer;
+import org.apache.storm.metric.api.ReducedMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -52,6 +54,8 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric ackedRetried;
     private transient CountMetric spoutAcked;
     private transient CountMetric spoutFailed;
+    private transient CountMetric spoutEmitted;
+    private transient ReducedMetric spoutListSize;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -90,6 +94,14 @@ public abstract class URLSpout extends BaseRichSpout {
         context.registerMetric("spout-failed",
                                spoutFailed,
                                METRICS_WINDOW);
+        spoutEmitted = new CountMetric();
+        context.registerMetric("spout-emitted",
+                               spoutEmitted,
+                               METRICS_WINDOW);
+        spoutListSize = new ReducedMetric(new URLListSizeReducer());
+        context.registerMetric("spout-list-size",
+                               spoutListSize,
+                               METRICS_WINDOW);
         this.acker = buildAcker(collector, config, ackedPublished, ackedSaved, ackedSkipped, ackedRetried);
 	}
 
@@ -107,14 +119,14 @@ public abstract class URLSpout extends BaseRichSpout {
 				urls.add(scanner.nextLine());
 			}
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		    logger.error("Could not load the URLs", e);
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	public void nextTuple() {
-		// Check the case when we read first seen elements
+	    spoutListSize.update((Integer)urllist.size());
 		if (!urllist.isEmpty()) {
 			String URLWithScheme = urllist.last();
 			urllist.remove(URLWithScheme);
@@ -126,6 +138,7 @@ public abstract class URLSpout extends BaseRichSpout {
 	    String URL = URLWithScheme + "#" +System.currentTimeMillis();
         String encodedURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
 		collector.emit(new Values(encodedURL), encodedURL);
+		spoutEmitted.incr();
 	}
 
 	@Override
@@ -160,4 +173,27 @@ public abstract class URLSpout extends BaseRichSpout {
         return URL;
     }
 
+    private class URLListSizeReducer implements IReducer<Integer> {
+        
+        private Integer size;
+
+        @Override
+        public Integer init() {
+            return 0;
+        }
+
+        @Override
+        public Integer reduce(Integer accumulator, Object input) {
+            if(input instanceof Integer) {
+                size = (Integer)input;
+            }
+            return size;
+        }
+
+        @Override
+        public Object extractResult(Integer accumulator) {
+            return accumulator;
+        }
+        
+    }
 }
