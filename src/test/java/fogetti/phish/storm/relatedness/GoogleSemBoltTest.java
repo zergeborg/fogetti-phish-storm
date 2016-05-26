@@ -79,7 +79,11 @@ public class GoogleSemBoltTest {
 
         // When we send a request to redis
         when(jedis.get(anyString())).thenThrow(new JedisException("Error"));
-        builder.build().execute(keyword);
+        SpyingGoogleSemBolt bolt = builder.build();
+        Map<String, Object> config = new HashMap<>();
+        config.put("timeout", 5000L);
+        bolt.prepare(config, mock(TopologyContext.class), mock(OutputCollector.class));
+        bolt.execute(keyword);
 
         // Then it fails
     }

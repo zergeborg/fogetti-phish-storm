@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.task.TopologyContext;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class MatcherBoltTest {
     public void segmentOne() throws Exception {
         // Given we want to segment a word before calculating relatedness
         MatcherBolt bolt = new TestDoubleMatcherBolt(countDataFile, psDataFile);
-        bolt.prepare(null, null, null);
+        bolt.prepare(null, mock(TopologyContext.class), null);
 
         // When we submit "itwasabrightcolddayinaprilandtheclockswerestrikingthirteen"
         List<String> segment = bolt.segment("itwasabrightcolddayinaprilandtheclockswerestrikingthirteen");
@@ -52,7 +53,7 @@ public class MatcherBoltTest {
     public void segmentTwo() throws Exception {
         // Given we want to segment a word before calculating relatedness
         MatcherBolt bolt = new TestDoubleMatcherBolt(countDataFile, psDataFile);
-        bolt.prepare(null, null, null);
+        bolt.prepare(null, mock(TopologyContext.class), null);
 
         // When we submit "inaholeinthegroundtherelivedahobbitnotanastydirtywetholefilledwiththeendsofwormsandanoozysmellnoryetadrybaresandyholewithnothinginittositdownonortoeatitwasahobbitholeandthatmeanscomfort"
         List<String> segment = bolt.segment("inaholeinthegroundtherelivedahobbitnotanastydirtywetholefilledwiththeendsofwormsandanoozysmellnoryetadrybaresandyholewithnothinginittositdownonortoeatitwasahobbitholeandthatmeanscomfort");

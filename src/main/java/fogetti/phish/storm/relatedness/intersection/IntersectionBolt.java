@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -49,6 +50,17 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
     private ObjectMapper mapper;
     private Decoder decoder;
     private Encoder encoder;
+    private final int METRICS_WINDOW = 10;
+    private transient CountMetric intersectionSegmentSaved;
+    private transient CountMetric intersectionSegmentSkipped;
+    private transient CountMetric intersectionIndexKeyUpdated;
+    private transient CountMetric intersectionIndexKeyCreated;
+    private transient CountMetric intersectionMsgLookupSuccess;
+    private transient CountMetric intersectionMsgLookupFailure;
+    private transient CountMetric intersectionActionPerformed;
+    private transient CountMetric intersectionActionSkipped;
+    private transient CountMetric intersectionActionLogged;
+    private transient CountMetric intersectionActionSaved;
 
 	public IntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
 		super(config);
@@ -66,6 +78,46 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 		this.decoder = Base64.getDecoder();
 		this.encoder = Base64.getEncoder();
 		this.mapper = new ObjectMapper();
+        intersectionSegmentSaved = new CountMetric();
+        context.registerMetric("intersection-segment-saved",
+                               intersectionSegmentSaved,
+                               METRICS_WINDOW);
+        intersectionSegmentSkipped = new CountMetric();
+        context.registerMetric("intersection-segment-skipped",
+                               intersectionSegmentSkipped,
+                               METRICS_WINDOW);
+        intersectionIndexKeyUpdated = new CountMetric();
+        context.registerMetric("intersection-index-key-updated",
+                               intersectionIndexKeyUpdated,
+                               METRICS_WINDOW);
+        intersectionIndexKeyCreated = new CountMetric();
+        context.registerMetric("intersection-index-key-created",
+                               intersectionIndexKeyCreated,
+                               METRICS_WINDOW);
+        intersectionMsgLookupSuccess = new CountMetric();
+        context.registerMetric("intersection-msg-lookup-success",
+                               intersectionMsgLookupSuccess,
+                               METRICS_WINDOW);
+        intersectionMsgLookupFailure = new CountMetric();
+        context.registerMetric("intersection-msg-lookup-failure",
+                               intersectionMsgLookupFailure,
+                               METRICS_WINDOW);
+        intersectionActionPerformed = new CountMetric();
+        context.registerMetric("intersection-action-performed",
+                               intersectionActionPerformed,
+                               METRICS_WINDOW);
+        intersectionActionSkipped = new CountMetric();
+        context.registerMetric("intersection-action-skipped",
+                               intersectionActionSkipped,
+                               METRICS_WINDOW);
+        intersectionActionLogged = new CountMetric();
+        context.registerMetric("intersection-action-logged",
+                               intersectionActionLogged,
+                               METRICS_WINDOW);
+        intersectionActionSaved = new CountMetric();
+        context.registerMetric("intersection-action-saved",
+                               intersectionActionSaved,
+                               METRICS_WINDOW);
 	}
 
 	@Override
@@ -93,6 +145,9 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
 	            String termString = mapper.writeValueAsString(termset);
 	            jedis.set(key, termString);
+	            intersectionSegmentSaved.incr();
+	        } else {
+	            intersectionSegmentSkipped.incr();
 	        }
 		} catch (JsonProcessingException e) {
 		    logger.error("Could not save the segment into Redis", e);
@@ -109,12 +164,14 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	            URLSegments urlsegments = mapper.readValue(rawUrlsegments, URLSegments.class);
 	            urlsegments.put(segment, terms);
                 String segmentString = mapper.writeValueAsString(urlsegments);
-                jedis.set(key, segmentString);                
+                jedis.set(key, segmentString);
+                intersectionIndexKeyUpdated.incr();
 	        } else {
 	            URLSegments urlsegments = new URLSegments();
 	            urlsegments.put(segment, terms);
 	            String segmentString = mapper.writeValueAsString(urlsegments);
 	            jedis.set(key, segmentString);
+	            intersectionIndexKeyCreated.incr();
 	        }
 	        logger.debug("Segment index updated with [url={}], [segment={}] and [termset={}]", url, segment, terms);
         } catch (IOException e) {
@@ -144,9 +201,11 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
             String key = REDIS_INTERSECTION_PREFIX + encodedURL;
             String rawSegments = jedis.get(key);
             URLSegments segments = mapper.readValue(rawSegments, URLSegments.class);
+            intersectionMsgLookupSuccess.incr();
             return segments;
         } catch (IOException e) {
             logger.error("Could not find saved segments", e);
+            intersectionMsgLookupFailure.incr();
         }
         return null;
     }
@@ -166,8 +225,10 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	        saveIntersectionResult(intersection, result.URL);
             intersectionAction.run();
             logger.info("Message [{}] intersected", message);
+            intersectionActionPerformed.incr();
 		} else {
 		    logger.warn("There are no segments for [{}]. Skipping intersection", result.URL);
+		    intersectionActionSkipped.incr();
 		}
 	}
 
@@ -209,6 +270,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 					intersection.MLDPSRES(),
 					intersection.RANKING(),
 					URL);
+		intersectionActionLogged.incr();
 	}
 
     private void saveIntersectionResult(IntersectionResult intersection, String URL) {
@@ -242,6 +304,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 URL)});
         try {
             Files.write(resultDataFile.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            intersectionActionSaved.incr();
         } catch (IOException e) {
             logger.error("Writing the result failed", e);
         }

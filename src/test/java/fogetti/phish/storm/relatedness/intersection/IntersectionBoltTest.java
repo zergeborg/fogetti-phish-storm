@@ -14,6 +14,7 @@ import java.util.List;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,7 +98,7 @@ public class IntersectionBoltTest {
 		String rawSegments = mapper.writeValueAsString(new URLSegments());
         when(jedis.get(anyString())).thenReturn(rawSegments);
 		OutputCollector collector = mock(OutputCollector.class);
-		bolt.prepare(null, null, collector);
+		bolt.prepare(null, mock(TopologyContext.class), collector);
 		bolt.execute(keyword);
 
 		// Then it returns a cached segment
@@ -121,7 +122,7 @@ public class IntersectionBoltTest {
 		// When we send a request to redis which returns no cached segment
 		when(jedis.exists(anyString())).thenReturn(false);
 		OutputCollector collector = mock(OutputCollector.class);
-		bolt.prepare(null, null, collector);
+		bolt.prepare(null, mock(TopologyContext.class), collector);
 		bolt.execute(keyword);
 
 		// Then we send a request to bing
@@ -143,7 +144,7 @@ public class IntersectionBoltTest {
 		when(input.getStringByField("url")).thenReturn(URL);
 		OutputCollector collector = mock(OutputCollector.class);
 		// When the input is empty
-		iBolt.prepare(null, null, collector);
+		iBolt.prepare(null, mock(TopologyContext.class), collector);
 		iBolt.execute(input);
 
 		// Then execute succeeds

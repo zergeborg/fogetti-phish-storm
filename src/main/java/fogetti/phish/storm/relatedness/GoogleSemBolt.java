@@ -43,6 +43,8 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 	private transient CountMetric googleTrendSuccess;
 	private transient CountMetric googleTrendFailure;
     private transient CountMetric googleTrendOverLimit;
+    private transient CountMetric googleSegmentLookupCnt;
+    private transient CountMetric googleSegmentLookupSuccess;
     private final File proxies;
     private List<String> proxyList;
     private ObjectMapper mapper;
@@ -81,6 +83,14 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
         context.registerMetric("google-trends-over-limit",
                                googleTrendOverLimit,
                                METRICS_WINDOW);
+        googleSegmentLookupCnt = new CountMetric();
+        context.registerMetric("google-segment-lookup-count",
+                               googleSegmentLookupCnt,
+                               METRICS_WINDOW);
+        googleSegmentLookupSuccess = new CountMetric();
+        context.registerMetric("google-segment-lookup-success",
+                               googleSegmentLookupSuccess,
+                               METRICS_WINDOW);
 	}
 	
 	public abstract WebClient buildClient();
@@ -90,6 +100,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		String segment = input.getStringByField("word");
 		String encodedURL = input.getStringByField("url");
 		try (Jedis jedis = (Jedis) getInstance()) {
+		    googleSegmentLookupCnt.incr();
 			String segments = jedis.get(REDIS_SEGMENT_PREFIX + segment);
 			Terms terms = null;
 			if (segments != null) {
@@ -103,6 +114,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 				googleTrendSuccess.incr();
 			} else {
 				logger.debug("Cached Google result found for [segment={}]", segment);
+				googleSegmentLookupSuccess.incr();
 			}
 			collector.emit(input, new Values(terms, segment, encodedURL));
 			logger.debug("Acking [{}]", input);

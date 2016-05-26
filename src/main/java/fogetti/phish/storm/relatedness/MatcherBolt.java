@@ -14,6 +14,7 @@ import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.bolt.AbstractRedisBolt;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.task.OutputCollector;
@@ -46,6 +47,10 @@ public class MatcherBolt extends AbstractRedisBolt {
     private Decoder decoder;
     private String[] schemes = {"http","https"};
     private UrlValidator urlValidator;
+    private transient CountMetric matcherEmittedRDSegment;
+    private transient CountMetric matcherEmittedREMSegment;
+    private transient CountMetric matcherAckedCnt;
+    private final int METRICS_WINDOW = 10;
 
     private static class SplitResult {
         String first;
@@ -66,6 +71,18 @@ public class MatcherBolt extends AbstractRedisBolt {
         this.mapper = new ObjectMapper();
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
+        matcherEmittedRDSegment = new CountMetric();
+        context.registerMetric("matcher-emitted-rd-segment",
+                               matcherEmittedRDSegment,
+                               METRICS_WINDOW);
+        matcherEmittedREMSegment = new CountMetric();
+        context.registerMetric("matcher-emitted-rem-segment",
+                               matcherEmittedREMSegment,
+                               METRICS_WINDOW);
+        matcherAckedCnt = new CountMetric();
+        context.registerMetric("matcher-acked-cnt",
+                               matcherAckedCnt,
+                               METRICS_WINDOW);
     }
 
     private Map<String, Long> readCountFromFile() {
@@ -175,13 +192,16 @@ public class MatcherBolt extends AbstractRedisBolt {
         for (String word : ack.getRDurl()) {
             logger.debug("Emitting [{}]", word);
             collector.emit(input, new Values(word, encodedURL));
+            matcherEmittedRDSegment.incr();
         }
         for (String word : ack.getREMurl()) {
             logger.debug("Emitting [{}]", word);
             collector.emit(input, new Values(word, encodedURL));
+            matcherEmittedREMSegment.incr();
         }
         logger.debug("Acking [{}]", input);
         collector.ack(input);
+        matcherAckedCnt.incr();
     }
 
     void calculateREMurl(String URL) {
