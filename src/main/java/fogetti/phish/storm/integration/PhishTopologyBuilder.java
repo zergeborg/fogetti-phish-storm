@@ -49,7 +49,7 @@ public class PhishTopologyBuilder {
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 32)
 		    .addConfiguration("timeout", 30000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
-			.setNumTasks(4096);
+			.setNumTasks(32768);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
 			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
