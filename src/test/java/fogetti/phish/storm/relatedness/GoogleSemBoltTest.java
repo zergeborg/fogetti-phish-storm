@@ -9,8 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,7 +30,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gargoylesoftware.htmlunit.WebClient;
 
-import fogetti.phish.storm.client.IRequest;
 import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
 import fogetti.phish.storm.client.WebClientUtil;
@@ -51,19 +48,21 @@ public class GoogleSemBoltTest {
 
     private String paypal;
     private Jedis jedis;
-    private IRequest request;
     private Builder builder;
+    private ObjectMapper mapper;
+    private Terms segments;
 
     @Before
     public void setup() throws Exception {
+        mapper = new ObjectMapper();
+        segments = new Terms();
         paypal = "paypal";
         jedis = mock(Jedis.class);
         URL proxyResource = this.getClass().getClassLoader().getResource("proxies.txt");
         File proxies = new File(proxyResource.toURI());
         JedisPoolConfig config = mock(JedisPoolConfig.class);
-        request = mock(IRequest.class);
         builder = new SpyingGoogleSemBolt.Builder();
-        builder.setConfig(config).setJedis(jedis).setProxies(proxies).setRequest(request);
+        builder.setConfig(config).setJedis(jedis).setProxies(proxies);
     }
 
     private List<Term> termsOf(String... string) {
@@ -94,9 +93,7 @@ public class GoogleSemBoltTest {
         SpyingGoogleSemBolt bolt = builder.build();
         Tuple keyword = mock(Tuple.class);
         when(keyword.getStringByField("segment")).thenReturn(paypal);
-        Terms segments = new Terms();
         segments.add(termsOf("paypal payment".split("\\s+")));
-        ObjectMapper mapper = new ObjectMapper();
         String segString = mapper.writeValueAsString(segments);
 
         // When we send a request to redis
@@ -116,7 +113,6 @@ public class GoogleSemBoltTest {
     public void cachedSegmentNotFound() throws Exception {
         // Given we want to get related words for a keyword
         SpyingGoogleSemBolt bolt = builder
-                .setRequest(mock(IRequest.class))
                 .setClient(WebClientUtil.getMockedWebClient("ordinary-top-searches.html"))
                 .build();
         Tuple keyword = mock(Tuple.class);
@@ -140,18 +136,18 @@ public class GoogleSemBoltTest {
     public void googleRequestFailed() throws Exception {
         // Given we want to query Google Related data
         SpyingGoogleSemBolt bolt = builder
-                .setRequest(new ErrorThrowingRequest(new SocketTimeoutException()))
                 .setClient(mock(WebClient.class))
                 .build();
-
-        // When the bolt sends a new query to Google
         Tuple input = mock(Tuple.class);
         when(input.getStringByField("word")).thenReturn(paypal);
         when(input.getStringByField("url")).thenReturn("url");
+        when(jedis.get(anyString())).thenReturn(null);
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
         OutputCollector spy = spy(collector);
         Map<String, Object> config = new HashMap<>();
         config.put("timeout", 5000L);
+
+        // When the bolt sends a new query to Google
         bolt.prepare(config, mock(TopologyContext.class), spy);
         bolt.execute(input);
 
@@ -165,7 +161,6 @@ public class GoogleSemBoltTest {
     public void googleRequestSucceeds() throws Exception {
         // Given we want to query Google Related data
         SpyingGoogleSemBolt bolt = builder
-                .setRequest(mock(IRequest.class))
                 .setClient(WebClientUtil.getMockedWebClient("ordinary-top-searches.html"))
                 .build();
         OutputCollector collector = new OutputCollector(mock(OutputCollector.class));
@@ -201,21 +196,6 @@ public class GoogleSemBoltTest {
 
         // Then it sends a new query to Google
         verify(input, atLeast(1)).getString(0);
-    }
-
-   private static class ErrorThrowingRequest implements IRequest {
-        
-        private final IOException t;
-        
-        public ErrorThrowingRequest(IOException t){ this.t = t; }
-        
-        @Override
-        public Request Get(String query) throws IOException {
-            throw t;
-        }
-
-        @Override
-        public Response execute() throws IOException { return null; }
     }
 
 }

@@ -9,7 +9,6 @@ import org.apache.storm.task.TopologyContext;
 
 import com.gargoylesoftware.htmlunit.WebClient;
 
-import fogetti.phish.storm.client.IRequest;
 import redis.clients.jedis.JedisCommands;
 
 public class SpyingGoogleSemBolt extends GoogleSemBolt {
@@ -19,7 +18,7 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
     protected OutputCollector collector;
     private final WebClient client;
 
-    private SpyingGoogleSemBolt(JedisPoolConfig config, File proxies, IRequest request, JedisCommands jedis, WebClient client) {
+    private SpyingGoogleSemBolt(JedisPoolConfig config, File proxies, JedisCommands jedis, WebClient client) {
         super(config, proxies);
         this.jedis = jedis;
         this.client = client;
@@ -49,7 +48,6 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
         private JedisPoolConfig config;
         private JedisCommands jedis;
         private File proxies;
-        private IRequest request;
         private WebClient client;
         
         public Builder setConfig(JedisPoolConfig config) {
@@ -67,18 +65,13 @@ public class SpyingGoogleSemBolt extends GoogleSemBolt {
             return this;
         }
 
-        public Builder setRequest(IRequest request) {
-            this.request = request;
-            return this;
-        }
-        
         public Builder setClient(WebClient client) {
             this.client = client;
             return this;
         }
         
         public SpyingGoogleSemBolt build() {
-            return new SpyingGoogleSemBolt(this.config, this.proxies, this.request, this.jedis, this.client);
+            return new SpyingGoogleSemBolt(this.config, this.proxies, this.jedis, this.client);
         }
     }
 }
