@@ -99,10 +99,12 @@ public class GoogleTrends {
             final HtmlPage htmlPage = (HtmlPage) page;
             final String html = htmlPage.asXml();
             return html;
-        } else {
+        } else if (page instanceof TextPage) {
             final TextPage textPage = (TextPage) page;
             final String html = textPage.getContent();
             return html;
+        } else {
+            return "";
         }
     }
 
