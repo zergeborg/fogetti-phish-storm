@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -17,6 +18,8 @@ import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.metric.api.IReducer;
 import org.apache.storm.metric.api.ReducedMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
+import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -25,6 +28,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCommands;
 
 /**
  * Implementation of the following real time phishing classifier:
@@ -56,6 +62,7 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric spoutFailed;
     private transient CountMetric spoutEmitted;
     private transient ReducedMetric spoutListSize;
+    private JedisCommandsInstanceContainer container;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -70,6 +77,7 @@ public abstract class URLSpout extends BaseRichSpout {
         this.encoder = Base64.getEncoder();
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
+        this.container = JedisCommandsContainerBuilder.build(config);
         ackedPublished = new CountMetric();
         context.registerMetric("acked-published",
                                ackedPublished,
@@ -130,9 +138,25 @@ public abstract class URLSpout extends BaseRichSpout {
 		if (!urllist.isEmpty()) {
 			String URLWithScheme = urllist.last();
 			urllist.remove(URLWithScheme);
-			doNextTuple(URLWithScheme);
+			if (!saved(URLWithScheme)) doNextTuple(URLWithScheme);
 		}
 	}
+
+    private boolean saved(String longURL) {
+        String encodedURL = getEncodedURL(longURL);
+        String key = "saved:" + encodedURL;
+        try (Jedis jedis = (Jedis) getInstance()) {
+            List<String> messages = jedis.lrange(key, 0L, 0L);
+            if (messages != null && !messages.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    private String getEncodedURL(String longURL) {
+        byte[] message = longURL.getBytes(StandardCharsets.UTF_8);
+        String encodedURL = encoder.encodeToString(message);
+        return encodedURL;
+    }
 
 	private void doNextTuple(String URLWithScheme) {
 	    String URL = URLWithScheme + "#" +System.currentTimeMillis();
@@ -171,6 +195,16 @@ public abstract class URLSpout extends BaseRichSpout {
         String longURL = new String(decoded, StandardCharsets.UTF_8);
         String URL = StringUtils.substringBeforeLast(longURL, "#");
         return URL;
+    }
+
+    /**     
+     * Borrow JedisCommands instance from container.<p></p>     
+     * JedisCommands is an interface which contains single key operations.      
+     * @return implementation of JedisCommands      
+     * @see JedisCommandsInstanceContainer#getInstance()        
+     */     
+    protected JedisCommands getInstance() {     
+        return this.container.getInstance();        
     }
 
     private class URLListSizeReducer implements IReducer<Integer> {

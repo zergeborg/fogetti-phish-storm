@@ -8,8 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,18 +59,36 @@ public class CSVReader {
 
     public void writeRandomUrls(int seed) {
         Random rnd = new Random();
-        try (BufferedReader reader = Files.newBufferedReader(source)) {
-            try (BufferedWriter writer = Files.newBufferedWriter(target)) {
-                List<String> result = new ArrayList<>();
-                List<String> lines = new ArrayList<>(reader.lines().collect(Collectors.toList()));
-                while(result.size() < seed){
-                    int randPos = rnd.nextInt(lines.size());
-                    result.add(lines.get(randPos));
-                }
-                for (String res : result) {
-                    writer.write(res+"\n");
-                }
+        try (BufferedWriter writer = Files.newBufferedWriter(target)) {
+            List<String> result = new ArrayList<>();
+            List<String> lines = Files.readAllLines(source);
+            while (result.size() < seed) {
+                int randPos = rnd.nextInt(lines.size());
+                result.add(lines.remove(randPos));
             }
+            for (String res : result) {
+                writer.write(res+"\n");
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }  
+
+    public void writeUniqueUrls(Path ctlSource) {
+        try {
+            Set<String> result = new HashSet<>();
+            System.out.println("Reading the source list");
+            List<String> lines = Files.readAllLines(source);
+            System.out.println("Reading the control list");
+            Set<String> ctlList = new HashSet<>(Files.readAllLines(ctlSource));
+            System.out.println("Reading done");
+            for (String line : lines) {
+                if (!ctlList.contains(line)) result.add(line);
+            }
+            System.out.println("Deleting the target file");
+            Files.delete(target);
+            System.out.println("Writing results to file");
+            Files.write(target, result);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fogetti.phish.storm.db.PublishMessage;
 import fogetti.phish.storm.exception.AckingFailedException;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCommands;
 
 public class URLSpoutTest {
 
@@ -88,6 +89,11 @@ public class URLSpoutTest {
         public IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried) {
             return new SynchronousAcker(collector, config);
         }
+
+        @Override
+        protected JedisCommands getInstance() {
+            return jedis;
+        }     
 	}
 
 	@Before

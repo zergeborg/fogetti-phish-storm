@@ -2,9 +2,7 @@ package fogetti.phish.storm.io;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
-import org.apache.commons.lang3.StringUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -24,29 +22,34 @@ public class CSVReaderTest {
 		// Then
 		csvReader.writeUrls();
 	}
-	
+
+    @Ignore
 	@Test
-    public void testName() throws Exception {
+    public void randomURLs() throws Exception {
         // Given
-        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-05-18/valid-and-phishing-urls.csv");
-        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-05-18/random-urls.csv");
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-and-phishing-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/random-urls.csv");
 	    
         // When
         CSVReader csvReader = new CSVReader(source, target);
 
         // Then
-        csvReader.writeRandomUrls(78824);
+        csvReader.writeRandomUrls(78706);
     }
-	
-	@Ignore
-	@Test
-	public void test() throws Exception {
-		// Given
 
-		// When
+    @Ignore
+    @Test
+    public void uniqueURLs() throws Exception {
+        // Given
+        Path cntrol = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/phishing-urls.csv");
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
 
-		// Then
-		System.out.println(Arrays.toString(StringUtils.split("alma/", "/")));
-	}
+        // When
+        CSVReader csvReader = new CSVReader(source, target);
 
+        // Then
+        csvReader.writeUniqueUrls(cntrol);
+    }
+    
 }
