@@ -39,7 +39,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 
 	private static final long serialVersionUID = -190657410047851526L;
 	private static final Logger logger = LoggerFactory.getLogger(GoogleSemBolt.class);
-	private final int METRICS_WINDOW = 60;
+	private final int METRICS_WINDOW = 120;
 	private transient CountMetric googleTrendSuccess;
 	private transient CountMetric googleTrendFailure;
     private transient CountMetric googleTrendOverLimit;
