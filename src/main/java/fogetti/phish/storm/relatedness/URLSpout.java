@@ -59,6 +59,7 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric ackedSkipped;
     private transient CountMetric ackedRetried;
     private transient CountMetric spoutAcked;
+    private transient CountMetric spoutSkipped;
     private transient CountMetric spoutFailed;
     private transient CountMetric spoutEmitted;
     private transient ReducedMetric spoutListSize;
@@ -83,7 +84,7 @@ public abstract class URLSpout extends BaseRichSpout {
                                ackedPublished,
                                METRICS_WINDOW);
         ackedSaved = new CountMetric();
-        context.registerMetric("akced-saved",
+        context.registerMetric("acked-saved",
                                ackedSaved,
                                METRICS_WINDOW);
         ackedSkipped = new CountMetric();
@@ -97,6 +98,10 @@ public abstract class URLSpout extends BaseRichSpout {
         spoutAcked = new CountMetric();
         context.registerMetric("spout-acked",
                                spoutAcked,
+                               METRICS_WINDOW);
+        spoutSkipped = new CountMetric();
+        context.registerMetric("spout-skipped",
+                               spoutSkipped,
                                METRICS_WINDOW);
         spoutFailed = new CountMetric();
         context.registerMetric("spout-failed",
@@ -139,6 +144,7 @@ public abstract class URLSpout extends BaseRichSpout {
 			String URLWithScheme = urllist.last();
 			urllist.remove(URLWithScheme);
 			if (!saved(URLWithScheme)) doNextTuple(URLWithScheme);
+			else spoutSkipped.incr();
 		}
 	}
 
@@ -161,6 +167,7 @@ public abstract class URLSpout extends BaseRichSpout {
 	private void doNextTuple(String URLWithScheme) {
 	    String URL = URLWithScheme + "#" +System.currentTimeMillis();
         String encodedURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+        logger.info("Emitting [{}]", encodedURL);
 		collector.emit(new Values(encodedURL), encodedURL);
 		spoutEmitted.incr();
 	}
