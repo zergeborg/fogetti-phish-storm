@@ -72,25 +72,25 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
             logger.error("Preparing the Google SEM bolt failed", e);
         }
 		googleTrendSuccess = new CountMetric();
-		context.registerMetric("google-tr-success",
-		                       googleTrendSuccess,
-		                       METRICS_WINDOW);
+//		context.registerMetric("google-tr-success",
+//		                       googleTrendSuccess,
+//		                       METRICS_WINDOW);
 		googleTrendFailure = new CountMetric();
-		context.registerMetric("google-tr-failures",
-		                       googleTrendFailure,
-		                       METRICS_WINDOW);
+//		context.registerMetric("google-tr-failures",
+//		                       googleTrendFailure,
+//		                       METRICS_WINDOW);
 		googleTrendOverLimit = new CountMetric();
-        context.registerMetric("google-tr-over-limit",
-                               googleTrendOverLimit,
-                               METRICS_WINDOW);
+//        context.registerMetric("google-tr-over-limit",
+//                               googleTrendOverLimit,
+//                               METRICS_WINDOW);
         googleSegmentLookupCnt = new CountMetric();
-        context.registerMetric("google-seg-lookup-count",
-                               googleSegmentLookupCnt,
-                               METRICS_WINDOW);
+//        context.registerMetric("google-seg-lookup-count",
+//                               googleSegmentLookupCnt,
+//                               METRICS_WINDOW);
         googleSegmentLookupSuccess = new CountMetric();
-        context.registerMetric("google-seg-lookup-success",
-                               googleSegmentLookupSuccess,
-                               METRICS_WINDOW);
+//        context.registerMetric("google-seg-lookup-success",
+//                               googleSegmentLookupSuccess,
+//                               METRICS_WINDOW);
 	}
 	
 	public abstract WebClient buildClient();
