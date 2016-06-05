@@ -14,11 +14,11 @@ public class PhishTopologyRemoteRunner {
 		config.setNumWorkers(60);
 		config.setMessageTimeoutSecs(60);
 		config.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE,
-	               new Integer(262144));
+	               new Integer(524288));
 	    config.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE,
-	               new Integer(262144));
+	               new Integer(524288));
 	    config.put(Config.TOPOLOGY_TRANSFER_BUFFER_SIZE,
-	               new Integer(262144));
+	               new Integer(524288));
 	    config.registerMetricsConsumer(LoggingMetricsConsumer.class, 1);
 		
 		StormSubmitter.submitTopology("phish-storm-topology", config, topology);
