@@ -161,7 +161,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	    try (Jedis jedis = (Jedis) getInstance()) {
 	        if (jedis.exists(key)) {
 	            String rawUrlsegments = jedis.get(key);
-	            URLSegments urlsegments = mapper.readValue(rawUrlsegments, URLSegments.class);
+	            URLSegments urlsegments = URLSegments.fromString(rawUrlsegments);
 	            urlsegments.put(segment, terms);
                 String segmentString = mapper.writeValueAsString(urlsegments);
                 jedis.set(key, segmentString);
@@ -169,7 +169,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	        } else {
 	            URLSegments urlsegments = new URLSegments();
 	            urlsegments.put(segment, terms);
-	            String segmentString = mapper.writeValueAsString(urlsegments);
+	            String segmentString = urlsegments.toString();
 	            jedis.set(key, segmentString);
 	            intersectionIndexKeyCreated.incr();
 	        }
@@ -200,7 +200,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
             String encodedURL = encoder.encodeToString(result.URL.getBytes(StandardCharsets.UTF_8));
             String key = REDIS_INTERSECTION_PREFIX + encodedURL;
             String rawSegments = jedis.get(key);
-            URLSegments segments = mapper.readValue(rawSegments, URLSegments.class);
+            URLSegments segments = URLSegments.fromString(rawSegments);
             intersectionMsgLookupSuccess.incr();
             return segments;
         } catch (IOException e) {
