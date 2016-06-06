@@ -42,14 +42,14 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource", new AsynchronousURLSpout(urlDataFile, poolConfig), 1)
-			.setMaxSpoutPending(80000);
+			.setMaxSpoutPending(8000);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(1);
-		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 384)
+		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 96)
 		    .addConfiguration("timeout", 20000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
-			.setNumTasks(18432);
+			.setNumTasks(4608);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
 			.globalGrouping("googletrends");
 		StormTopology topology = builder.createTopology();
