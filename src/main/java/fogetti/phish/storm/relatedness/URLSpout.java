@@ -20,6 +20,7 @@ import org.apache.storm.metric.api.ReducedMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.redis.common.container.JedisCommandsContainerBuilder;
 import org.apache.storm.redis.common.container.JedisCommandsInstanceContainer;
+import org.apache.storm.redis.common.container.JedisContainer;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
+import redis.clients.jedis.exceptions.JedisException;
 
 /**
  * Implementation of the following real time phishing classifier:
@@ -63,7 +65,7 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric spoutFailed;
     private transient CountMetric spoutEmitted;
     private transient ReducedMetric spoutListSize;
-    private JedisCommandsInstanceContainer container;
+    private JedisContainer container;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -78,7 +80,7 @@ public abstract class URLSpout extends BaseRichSpout {
         this.encoder = Base64.getEncoder();
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
-        this.container = JedisCommandsContainerBuilder.build(config);
+        this.container = (JedisContainer)JedisCommandsContainerBuilder.build(config);
         ackedPublished = new CountMetric();
         context.registerMetric("acked-published",
                                ackedPublished,
@@ -151,9 +153,15 @@ public abstract class URLSpout extends BaseRichSpout {
     private boolean saved(String longURL) {
         String encodedURL = getEncodedURL(longURL);
         String key = "saved:" + encodedURL;
-        try (Jedis jedis = (Jedis) getInstance()) {
+        Jedis jedis = (Jedis) getInstance();
+        try {
             List<String> messages = jedis.lrange(key, 0L, 0L);
             if (messages != null && !messages.isEmpty()) return true;
+        } catch (JedisException e) {
+            closeRedis();
+            throw e;
+        } finally {
+            returnInstance(jedis);
         }
         return false;
     }
@@ -214,6 +222,21 @@ public abstract class URLSpout extends BaseRichSpout {
         return this.container.getInstance();        
     }
 
+    /**
+     * Return borrowed instance to container.
+     * @param instance borrowed object
+     */
+    protected void returnInstance(JedisCommands instance) {
+        this.container.returnInstance(instance);
+    }
+    
+    /**
+     * Close the redis container.
+     */
+    private void closeRedis() {
+        this.container.close();
+    }
+    
     private class URLListSizeReducer implements IReducer<Integer> {
         
         private Integer size;
