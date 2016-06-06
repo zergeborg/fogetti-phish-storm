@@ -163,7 +163,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	            String rawUrlsegments = jedis.get(key);
 	            URLSegments urlsegments = URLSegments.fromString(rawUrlsegments);
 	            urlsegments.put(segment, terms);
-                String segmentString = mapper.writeValueAsString(urlsegments);
+                String segmentString = urlsegments.toString();
                 jedis.set(key, segmentString);
                 intersectionIndexKeyUpdated.incr();
 	        } else {
