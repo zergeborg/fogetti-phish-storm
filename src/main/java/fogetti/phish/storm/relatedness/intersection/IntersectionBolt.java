@@ -147,6 +147,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	            jedis.set(key, termString);
 	            intersectionSegmentSaved.incr();
 	        } else {
+                logger.debug("Skipping segment [segment={}] and [termset={}]", segment, termset);
 	            intersectionSegmentSkipped.incr();
 	        }
 		} catch (JsonProcessingException e) {

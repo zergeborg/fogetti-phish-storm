@@ -84,13 +84,13 @@ public class URLSegments implements Serializable {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append("{\"termindex\":{");
-        Map<String, String> map = toStringMap();
         StringBuilder result = new StringBuilder();
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            if (result.length() > 0) result.append( ", " );
-            result.append(String.format("\"%s\":", entry.getKey()));
-            result.append(entry.getValue());
-        }
+        termindex.entrySet().stream().forEach(
+                e -> {
+                    if (result.length() > 0) result.append( ", " );
+                    result.append(String.format("\"%s\":", e.getKey()));
+                    result.append(e.getValue());
+                });
         result.append("}");
         builder.append(result.toString());
         builder.append("}");
