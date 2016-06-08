@@ -161,8 +161,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	    String key = REDIS_INTERSECTION_PREFIX + url;
 	    try (Jedis jedis = (Jedis) getInstance()) {
 	        if (jedis.exists(key)) {
-	            String rawUrlsegments = jedis.get(key);
-	            URLSegments urlsegments = URLSegments.fromString(rawUrlsegments);
+	            Map<String, String> rawSegments = jedis.hgetAll(key);
+	            URLSegments urlsegments = URLSegments.fromStringMap(rawSegments);
 	            urlsegments.put(segment, terms);
                 jedis.hmset(key, urlsegments.toStringMap());
                 intersectionIndexKeyUpdated.incr();
