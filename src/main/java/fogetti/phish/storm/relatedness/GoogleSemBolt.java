@@ -4,6 +4,7 @@ import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -141,7 +142,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		String nextProxy = proxyList.get(nextPick);
 		String[] hostAndPort = nextProxy.split(":");
         ProxyConfig proxyConfig = new ProxyConfig(hostAndPort[0],Integer.parseInt(hostAndPort[1]));
-        Builder builder = new GoogleTrends.Builder(proxyConfig, segment)
+        Builder builder = new GoogleTrends.Builder(proxyConfig, URLEncoder.encode(segment, "UTF-8"))
                 .setHttpClient(buildClient())
                 .setConnectTimeout((int)timeout);
 		GoogleTrends client = builder.build();
