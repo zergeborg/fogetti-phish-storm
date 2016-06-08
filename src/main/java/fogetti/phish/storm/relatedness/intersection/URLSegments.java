@@ -3,6 +3,7 @@ package fogetti.phish.storm.relatedness.intersection;
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -99,8 +100,11 @@ public class URLSegments implements Serializable {
 
     public static URLSegments fromStringMap(Map<String, String> src) throws IOException {
         URLSegments segments = new URLSegments();
-        for (String key : src.keySet()) {
-            segments.put(key, mapper.readValue(src.remove(key), Terms.class));
+        Iterator<Map.Entry<String, String>> it = src.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, String> e = it.next();
+            segments.put(e.getKey(), mapper.readValue(e.getValue(), Terms.class));
+            it.remove();
         }
         return segments;
     }
