@@ -97,6 +97,14 @@ public class URLSegments implements Serializable {
         return builder.toString();
     }
 
+    public static URLSegments fromStringMap(Map<String, String> src) throws IOException {
+        URLSegments segments = new URLSegments();
+        for (String key : src.keySet()) {
+            segments.put(key, mapper.readValue(src.remove(key), Terms.class));
+        }
+        return segments;
+    }
+    
     public static URLSegments fromString(String src) throws IOException {
         URLSegments segments = new URLSegments();
         JsonFactory jfactory = new JsonFactory();
