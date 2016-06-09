@@ -114,7 +114,7 @@ public class MatcherBolt extends AbstractRedisBolt {
     @Override
     public void execute(Tuple input) {
         try {
-            ack = new AckResult();
+            createNewAckResult();
             String encodedURL = input.getStringByField("url");
             byte[] decodedURL = decoder.decode(encodedURL);
             String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
@@ -135,6 +135,10 @@ public class MatcherBolt extends AbstractRedisBolt {
             logger.error("Unexpected error", e);
             collector.fail(input);
         }
+    }
+
+    void createNewAckResult() {
+        ack = new AckResult();
     }
 
     private void calculate(String schemedUrl) {
@@ -264,6 +268,7 @@ public class MatcherBolt extends AbstractRedisBolt {
         if (memomap.containsKey(text)) {
             return memomap.get(text);
         } else {
+            System.out.println("Searching result for: "+text);
             List<String> result = findResult(text);
             memomap.put(text, result);
             return result;

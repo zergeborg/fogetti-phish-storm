@@ -18,8 +18,8 @@ public class AssignClassAttributeTest {
     @Test
     public void assignClassAttribute() throws Exception {
         // Given we have results without class attributes
-        Path result = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-01/phishing-result.csv");
-        Path classed = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-01/phishing-result-classified.csv");
+        Path result = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-08/phishing-result.csv");
+        Path classed = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-08/phishing-result-classified.csv");
         Path phish = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/phishing-urls.csv");
         Path valid = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
         Set<String> pUrls = new HashSet<>(Files.readAllLines(phish));
@@ -34,7 +34,8 @@ public class AssignClassAttributeTest {
             else link = "https:" + StringUtils.removeEnd(StringUtils.substringAfter(line, "\"https:"), "\"");
             System.out.println("Checking: "+link);
             if (pUrls.contains(link)) classified.add(line+",no");
-            else classified.add(line+",yes");
+            else if (vUrls.contains(link)) classified.add(line+",yes");
+            else classified.add(line+",bubu");
         }
         
         // Then we get the class attributes appended

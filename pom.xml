@@ -101,6 +101,14 @@
 				</configuration>
 			</plugin>
 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Xss16M</argLine>
+				</configuration>
+			</plugin>
+			
 		</plugins>
 	</build>
 
