@@ -1,7 +1,9 @@
 package fogetti.phish.storm.relatedness.intersection;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -11,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import fogetti.phish.storm.client.IRequest;
+import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
@@ -72,7 +75,15 @@ public class IntersectionResult {
 			    .terms
 				.stream()
 				.forEach(t -> {
-					if (!t.contains(v.getKey())) ASrem.addAll(t.words);
+				    if (t.contains(v.getKey())) {
+    				    List<String> asrem =
+    				            t
+    				            .words
+    				            .stream()
+    				            .filter(p ->  !v.getKey().equals(p))
+    				            .collect(Collectors.toList());
+    					ASrem.addAll(asrem);
+				    }
 			});
 		});
 		logger.debug("[ASrem={}]", ASrem);
@@ -92,8 +103,16 @@ public class IntersectionResult {
 			v.getValue()
 			    .terms
 				.stream()
-				.forEach(t -> {
-					if (!t.contains(v.getKey())) ASrd.addAll(t.words);
+                .forEach(t -> {
+                    if (t.contains(v.getKey())) {
+                        List<String> asrem =
+                                t
+                                .words
+                                .stream()
+                                .filter(p ->  !v.getKey().equals(p))
+                                .collect(Collectors.toList());
+                        ASrd.addAll(asrem);
+                    }
 			});
 		});
 		logger.debug("[ASrd={}]", ASrd);
@@ -147,13 +166,13 @@ public class IntersectionResult {
 	}
 	
 	public Integer CARDREM() {
-	    int count = 0;
-	    for (Terms terms : REMTermindex.values()) {
-            count += terms.count();
-        }
-		return count;
+		return REMTermindex.keySet().size();
 	}
 	
+    public Integer CARDRD() {
+        return RDTermindex.keySet().size();
+    }
+    
 	public Double RATIOAREM() {
 		Integer cardrem = CARDREM();
 		if (cardrem == 0) {
@@ -171,19 +190,39 @@ public class IntersectionResult {
 	}
 
 	Double RATIOARD() {
-		return ASrd.getEstimatedPopulation() / RDTermindex.keySet().size();
+        Integer cardrd = CARDRD();
+        if (cardrd == 0) {
+            return 0.0D;
+        }
+		return ASrd.getEstimatedPopulation() / cardrd;
 	}
 	
 	Double RATIORRD() {
-		return RELrd.getEstimatedPopulation() / RDTermindex.keySet().size();
+        Integer cardrd = CARDRD();
+        if (cardrd == 0) {
+            return 0.0D;
+        }
+		return RELrd.getEstimatedPopulation() / cardrd;
 	}
 
 	public Integer MLDRES() {
-		return MLDTermindex.size() == 0 ? 0 : 1;
+	    int size = 0;
+	    for (Terms t : MLDTermindex.values()) {
+	        for (Term term : t.terms) {
+                if (!term.words.isEmpty()) size++;
+            }
+        }
+		return size == 0 ? 0 : 1;
 	}
-	
+
 	public Integer MLDPSRES() {
-		return MLDPSTermindex.size() == 0 ? 0 : 1;
+        int size = 0;
+        for (Terms t : MLDPSTermindex.values()) {
+            for (Term term : t.terms) {
+                if (!term.words.isEmpty()) size++;
+            }
+        }
+        return size == 0 ? 0 : 1;
 	}
 	
 	public Integer RANKING() {

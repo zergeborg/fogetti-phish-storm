@@ -55,7 +55,7 @@ public class IntersectionResultTest {
     }
     
 	@Test
-	public void ASRem_NoAssociatedWords() throws Exception {
+	public void RATIOARem_NoAssociatedWords() throws Exception {
 		// Given
 		Map<String, Terms> REMTermindex = new HashMap<>();
 		Terms paypalAssociated = new Terms();
@@ -77,18 +77,18 @@ public class IntersectionResultTest {
 	}
 	
 	@Test
-	public void ASRem_AssociatedWordsAreSame() throws Exception {
+	public void RATIOARem_AssociatedWordsAreSame() throws Exception {
 		// Given
 		Map<String, Terms> REMTermindex = new HashMap<>();
 		Terms paypalAssociated = new Terms();
 		String paypal = "paypal";
-		paypalAssociated.add(termsOf("alma".split("\\s+")));
-		paypalAssociated.add(termsOf("alma".split("\\s+")));
+		paypalAssociated.add(termsOf("paypal alma".split("\\s+")));
+		paypalAssociated.add(termsOf("paypal alma".split("\\s+")));
 		REMTermindex.put(paypal, paypalAssociated);
 		Terms loginAssociated = new Terms();
 		String login = "login";
-		loginAssociated.add(termsOf("korte".split("\\s+")));
-		loginAssociated.add(termsOf("korte".split("\\s+")));
+		loginAssociated.add(termsOf("login korte".split("\\s+")));
+		loginAssociated.add(termsOf("login korte".split("\\s+")));
 		REMTermindex.put(login, loginAssociated);
 		IntersectionResult result = new IntersectionResult(new HashMap<>(), REMTermindex, new HashMap<>(), new HashMap<>(), request, url, client);
 
@@ -101,18 +101,18 @@ public class IntersectionResultTest {
 	}
 
 	@Test
-	public void ASRem_AssociatedWordsDifferent() throws Exception {
+	public void RATIOARem_AssociatedWordsDifferent() throws Exception {
 		// Given
 		Map<String, Terms> REMTermindex = new HashMap<>();
 		Terms paypalAssociated = new Terms();
 		String paypal = "paypal";
-		paypalAssociated.add(termsOf("alma".split("\\s+")));
-		paypalAssociated.add(termsOf("korte".split("\\s+")));
+		paypalAssociated.add(termsOf("paypal alma".split("\\s+")));
+		paypalAssociated.add(termsOf("paypal korte".split("\\s+")));
 		REMTermindex.put(paypal, paypalAssociated);
 		Terms loginAssociated = new Terms();
 		String login = "login";
-		loginAssociated.add(termsOf("barack".split("\\s+")));
-		loginAssociated.add(termsOf("cseresznye".split("\\s+")));
+		loginAssociated.add(termsOf("login barack".split("\\s+")));
+		loginAssociated.add(termsOf("login cseresznye".split("\\s+")));
 		REMTermindex.put(login, loginAssociated);
 		IntersectionResult result = new IntersectionResult(new HashMap<>(), REMTermindex, new HashMap<>(), new HashMap<>(), request, url, client);
 
@@ -189,7 +189,7 @@ public class IntersectionResultTest {
 	}
 	
 	@Test
-	public void ASRd_NoAssociatedWords() throws Exception {
+	public void RATIOARd_NoAssociatedWords() throws Exception {
 		// Given
 		Map<String, Terms> RDTermindex = new HashMap<>();
 		Terms googleMldAssociated = new Terms();
@@ -211,7 +211,7 @@ public class IntersectionResultTest {
 	}
 	
 	@Test
-	public void ASRd_AssociatedWordsAreSame() throws Exception {
+	public void RATIOARd_AssociatedWordsAreSame() throws Exception {
 		// Given
 		Map<String, Terms> RDTermindex = new HashMap<>();
 		Terms googleMldAssociated = new Terms();
@@ -229,11 +229,11 @@ public class IntersectionResultTest {
 
 		// Then
 		logger.info("RATIOARD with same associated words [{}]", result.RATIOARD());
-		assertTrue("RATIOARD was incorrect", result.RATIOARD() > 1D);
+		assertTrue("RATIOARD was incorrect", result.RATIOARD() < 1D);
 	}
-	
+
 	@Test
-	public void ASRd_AssociatedWordsDifferent() throws Exception {
+	public void RATIOARd_AssociatedWordsDifferent() throws Exception {
 		// Given
 		Map<String, Terms> RDTermindex = new HashMap<>();
 		Terms googleMldAssociated = new Terms();
@@ -251,7 +251,7 @@ public class IntersectionResultTest {
 
 		// Then
 		logger.info("RATIOARD with different associated words [{}]", result.RATIOARD());
-		assertTrue("RATIOARD was incorrect", result.RATIOARD() > 1D);
+		assertTrue("RATIOARD was incorrect", result.RATIOARD() < 1D);
 	}
 	
 	@Test
@@ -498,7 +498,7 @@ public class IntersectionResultTest {
         HashMap<String, Terms> RD = new HashMap<>();
         RD.put("google.com", new Terms(new Term("android", "google")));
         HashMap<String, Terms> REM = new HashMap<>();
-        REM.put("blabber", new Terms(new Term("android", "ios")));
+        REM.put("blabber", new Terms(new Term("blabber", "android", "ios")));
         IntersectionResult result = new IntersectionResult(RD, REM, new HashMap<>(), new HashMap<>(), request, url, client);
 
         // When
@@ -521,7 +521,7 @@ public class IntersectionResultTest {
         result.init();
 
         // Then
-        assertEquals("JAA was incorrect", 0.0, result.JAA(), 0.00001);
+        assertEquals("JAA was incorrect", 1.0, result.JAA(), 0.00001);
     }
 
     @Test
@@ -540,9 +540,9 @@ public class IntersectionResultTest {
     public void JAA_notEmptyIntersection() throws Exception {
         // Given
         HashMap<String, Terms> RD = new HashMap<>();
-        RD.put("google.com", new Terms(new Term("android", "google")));
+        RD.put("google.com", new Terms(new Term("google.com", "android", "google")));
         HashMap<String, Terms> REM = new HashMap<>();
-        REM.put("blabber", new Terms(new Term("android", "blubber")));
+        REM.put("blabber", new Terms(new Term("blabber", "android", "blubber")));
         IntersectionResult result = new IntersectionResult(RD, REM, new HashMap<>(), new HashMap<>(), request, url, client);
 
         // When
@@ -584,7 +584,7 @@ public class IntersectionResultTest {
     public void JAR_notEmptyIntersection() throws Exception {
         // Given
         HashMap<String, Terms> RD = new HashMap<>();
-        RD.put("google.com", new Terms(new Term("android", "google")));
+        RD.put("google.com", new Terms(new Term("google.com", "android", "google")));
         HashMap<String, Terms> REM = new HashMap<>();
         REM.put("blabber", new Terms(new Term("android", "blubber")));
         IntersectionResult result = new IntersectionResult(RD, REM, new HashMap<>(), new HashMap<>(), request, url, client);
@@ -600,7 +600,7 @@ public class IntersectionResultTest {
     public void JARRD_emptyIntersection() throws Exception {
         // Given
         HashMap<String, Terms> RD = new HashMap<>();
-        RD.put("google.com", new Terms(new Term("google.com", "google")));
+        RD.put("google.com", new Terms(new Term("google")));
         IntersectionResult result = new IntersectionResult(RD, new HashMap<>(), new HashMap<>(), new HashMap<>(), request, url, client);
 
         // When
@@ -640,7 +640,7 @@ public class IntersectionResultTest {
     public void JARREM_emptyIntersection() throws Exception {
         // Given
         HashMap<String, Terms> REM = new HashMap<>();
-        REM.put("apple", new Terms(new Term("apple", "banana")));
+        REM.put("apple", new Terms(new Term("coconut"),new Term("banana")));
         IntersectionResult result = new IntersectionResult(new HashMap<>(), REM, new HashMap<>(), new HashMap<>(), request, url, client);
 
         // When
