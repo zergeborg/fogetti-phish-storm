@@ -18,8 +18,8 @@ public class AssignClassAttributeTest {
     @Test
     public void assignClassAttribute() throws Exception {
         // Given we have results without class attributes
-        Path result = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-09/phishing-result.csv");
-        Path classed = Paths.get("/Users/fogetti/Work/backup/phish-result-2016-06-09/phishing-result-classified.csv");
+        Path result = Paths.get("/Users/fogetti/Work/backup/alexa-result-2016-06-113/phishing-result.csv");
+        Path classed = Paths.get("/Users/fogetti/Work/backup/alexa-result-2016-06-113/phishing-result-classified.csv");
         Path phish = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/phishing-urls.csv");
         Path valid = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
         Set<String> pUrls = new HashSet<>(Files.readAllLines(phish));
@@ -35,10 +35,20 @@ public class AssignClassAttributeTest {
             System.out.println("Checking: "+link);
             if (pUrls.contains(link)) classified.add(line+",no");
             else if (vUrls.contains(link)) classified.add(line+",yes");
-            else classified.add(line+",bubu");
+            else {
+                final String flink = link;
+                pUrls.forEach(u -> {
+                    if (u.startsWith(flink) && !classified.contains(line+",no")) classified.add(line+",no");
+                });
+                vUrls.forEach(u -> {
+                    if (u.startsWith(flink) && !classified.contains(line+",no") && !classified.contains(line+",yes")) classified.add(line+",yes");
+                });
+                if (!classified.contains(line+",no") && !classified.contains(line+",yes")) classified.add(line+",bubu");
+            }
         }
         
         // Then we get the class attributes appended
+        Files.deleteIfExists(classed);
         Files.write(classed, classified);
     }
     
