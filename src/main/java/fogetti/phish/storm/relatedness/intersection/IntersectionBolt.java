@@ -45,8 +45,8 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private final IntersectionAction intersectionAction;
 	private final JedisPoolConfig config;
     private final File resultDataFile;
-    private int connectTimeout = 5000;
-    private int socketTimeout = 5000;
+    private int connectTimeout = 30000;
+    private int socketTimeout = 30000;
     private ObjectMapper mapper;
     private Decoder decoder;
     private Encoder encoder;
