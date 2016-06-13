@@ -41,15 +41,30 @@ public class CSVReaderTest {
     @Test
     public void uniqueURLs() throws Exception {
         // Given
-        Path cntrol = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/phishing-urls.csv");
-        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
-        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
+        Path cntrol = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-and-phishing-urls.csv");
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-13/valid-and-phishing-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-13/test-urls.csv");
 
         // When
         CSVReader csvReader = new CSVReader(source, target);
 
         // Then
         csvReader.writeUniqueUrls(cntrol);
+    }
+    
+    @Ignore
+    @Test
+    public void commonURLs() throws Exception {
+        // Given
+        Path cntrol = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-and-phishing-urls.csv");
+        Path source = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-01/valid-urls.csv");
+        Path target = Paths.get("/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/training-2016-06-13/valid-common-urls.csv");
+
+        // When
+        CSVReader csvReader = new CSVReader(source, target);
+
+        // Then
+        csvReader.writeCommonUrls(cntrol);
     }
     
 }

@@ -86,7 +86,27 @@ public class CSVReader {
                 if (!ctlList.contains(line)) result.add(line);
             }
             System.out.println("Deleting the target file");
-            Files.delete(target);
+            Files.deleteIfExists(target);
+            System.out.println("Writing results to file");
+            Files.write(target, result);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }  
+
+    public void writeCommonUrls(Path ctlSource) {
+        try {
+            Set<String> result = new HashSet<>();
+            System.out.println("Reading the source list");
+            List<String> lines = Files.readAllLines(source);
+            System.out.println("Reading the control list");
+            Set<String> ctlList = new HashSet<>(Files.readAllLines(ctlSource));
+            System.out.println("Reading done");
+            for (String line : lines) {
+                if (ctlList.contains(line)) result.add(line);
+            }
+            System.out.println("Deleting the target file");
+            Files.deleteIfExists(target);
             System.out.println("Writing results to file");
             Files.write(target, result);
         } catch (IOException e) {
