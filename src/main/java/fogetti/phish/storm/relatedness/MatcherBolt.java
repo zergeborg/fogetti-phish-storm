@@ -157,8 +157,10 @@ public class MatcherBolt extends AbstractRedisBolt {
         String mldps = URL.split("/")[0];
         PublicSuffixMatcher matcher = readPublicSuffixListFromFile();
         String ps = matcher.findPublicSuffix(mldps);
-        logger.trace("URL [{}] has the following public suffix [{}]", URL, ps);
-        String mld = StringUtils.substringAfterLast(StringUtils.substringBeforeLast(mldps, "." + ps), ".");
+        logger.debug("URL [{}] has the following public suffix [{}]", URL, ps);
+        String beforeLast = StringUtils.substringBeforeLast(mldps, "." + ps);
+        String mld = beforeLast;
+        if (beforeLast.contains(".")) mld = StringUtils.substringAfterLast(beforeLast, ".");
         ack.MLD = mld;
         ack.addRD(mld);
         ack.MLDPS = mld+"."+ps;

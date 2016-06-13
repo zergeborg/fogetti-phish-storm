@@ -11,7 +11,7 @@ public class Rule {
 	public boolean exception = false;
 	private List<String> labels = new CopyOnWriteArrayList<>();
 
-	public String match(Domain domain) {
+	public String findMatch(Domain domain) {
 		int ruleSize = labels.size();
 		int domainSize = domain.labels.size();
 		if (domainSize < ruleSize) return "";
@@ -20,20 +20,30 @@ public class Rule {
 		return result(ps);
 	}
 
-	public void identical(Stack<String> ps, ListIterator<String> rulesIterator, ListIterator<String> domainsIterator) {
+    public boolean isMatch(Domain domain) {
+        int ruleSize = labels.size();
+        int domainSize = domain.labels.size();
+        if (domainSize < ruleSize) return false;
+        Stack<String> ps = new Stack<>();
+        return identical(ps, labels.listIterator(ruleSize), domain.labels.listIterator(domainSize));
+    }
+
+	public boolean identical(Stack<String> ps, ListIterator<String> rulesIterator, ListIterator<String> domainsIterator) {
 		boolean identical = false;
 		do {
-			identical = checkIdentical(identical, ps, rulesIterator.previous(), domainsIterator.previous());
+			identical = checkIdentical(ps, rulesIterator.previous(), domainsIterator.previous());
 		} while (
 			previousValid(identical, rulesIterator, domainsIterator)
 		);
+		return identical;
 	}
 
-	private boolean checkIdentical(boolean identical, Stack<String> ps, String prevRuleLabel,
+	private boolean checkIdentical(Stack<String> ps, String prevRuleLabel,
 			String prevDomainLabel) {
+        boolean identical = false;
 		if (prevRuleLabel.equals(prevDomainLabel))
 			identical = true;
-		if (prevRuleLabel.equals("*"))
+		else if (prevRuleLabel.equals("*"))
 			identical = true;
 		if (identical)
 			ps.push(prevDomainLabel);
