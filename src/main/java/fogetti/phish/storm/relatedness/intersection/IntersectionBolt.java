@@ -287,7 +287,7 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 + "%d,"
                 + "%d,"
                 + "%d,"
-                + "%s",
+                + "\"%s\"",
                 intersection.JRR(),
                 intersection.JRA(),
                 intersection.JAA(),
