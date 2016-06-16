@@ -25,7 +25,6 @@ import fogetti.phish.storm.client.Term;
 import fogetti.phish.storm.client.Terms;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
-import redis.clients.jedis.exceptions.JedisException;
 
 public class IntersectionBoltTest {
 	
@@ -64,21 +63,6 @@ public class IntersectionBoltTest {
         return paypalTerms;
     }
     
-	@Test(expected = JedisException.class)
-	public void redisRequestFails() throws Exception {
-		// Given we want to get related words for a keyword
-		JedisPoolConfig config = mock(JedisPoolConfig.class);
-		IntersectionBolt bolt = new TestDoubleIntersectionBolt(null, config, resultDataFile);
-		Tuple keyword = mock(Tuple.class);
-		when(keyword.getStringByField("segment")).thenReturn(paypal);
-
-		// When we send a request to redis
-		when(jedis.exists(anyString())).thenThrow(new JedisException("Error"));
-		bolt.execute(keyword);
-
-		// Then it fails
-	}
-
 	@Test
 	public void cachedSegmentFound() throws Exception {
 		// Given we want to get related words for a keyword

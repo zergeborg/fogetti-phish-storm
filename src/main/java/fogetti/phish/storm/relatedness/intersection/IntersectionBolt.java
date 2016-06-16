@@ -55,7 +55,6 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
     private Encoder encoder;
     private final int METRICS_WINDOW = 10;
     private transient CountMetric intersectionSegmentSaved;
-    private transient CountMetric intersectionSegmentSkipped;
     private transient CountMetric intersectionIndexKeyUpdated;
     private transient CountMetric intersectionIndexKeyCreated;
     private transient CountMetric intersectionMsgLookupSuccess;
@@ -84,10 +83,6 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
         intersectionSegmentSaved = new CountMetric();
         context.registerMetric("int-segment-saved",
                                intersectionSegmentSaved,
-                               METRICS_WINDOW);
-        intersectionSegmentSkipped = new CountMetric();
-        context.registerMetric("int-segment-skipped",
-                               intersectionSegmentSkipped,
                                METRICS_WINDOW);
         intersectionIndexKeyUpdated = new CountMetric();
         context.registerMetric("int-index-key-updated",
@@ -144,15 +139,10 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
 	private void save(Tuple input, String segment, Terms termset) {
         try (Jedis jedis = (Jedis) getInstance()) {
 	        String key = REDIS_SEGMENT_PREFIX + segment;
-	        if (!jedis.exists(key)) {
-	            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
-	            String termString = mapper.writeValueAsString(termset);
-	            jedis.set(key, termString);
-	            intersectionSegmentSaved.incr();
-	        } else {
-                logger.debug("Skipping segment [segment={}] and [termset={}]", segment, termset);
-	            intersectionSegmentSkipped.incr();
-	        }
+            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
+            String termString = mapper.writeValueAsString(termset);
+            jedis.set(key, termString);
+            intersectionSegmentSaved.incr();
 		} catch (JsonProcessingException e) {
 		    logger.error("Could not save the segment into Redis", e);
 		    collector.fail(input);
