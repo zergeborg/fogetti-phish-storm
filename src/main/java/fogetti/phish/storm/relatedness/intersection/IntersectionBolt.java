@@ -34,7 +34,10 @@ import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.db.JedisCallback;
 import fogetti.phish.storm.db.JedisListener;
 import fogetti.phish.storm.relatedness.AckResult;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import redis.clients.jedis.Jedis;
 
 public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback {
@@ -238,7 +241,23 @@ public class IntersectionBolt extends AbstractRedisBolt implements JedisCallback
                 .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
                 .readTimeout(socketTimeout, TimeUnit.MILLISECONDS)
                 .writeTimeout(socketTimeout, TimeUnit.MILLISECONDS)
-                .build();
+                .addInterceptor(new Interceptor() {
+                    @Override
+                    public Response intercept(Chain chain) throws IOException {
+                        Request request = chain.request();
+                        // try the request
+                        Response response = chain.proceed(request);
+                        int tryCount = 0;
+                        while (!response.isSuccessful() && tryCount < 3) {
+                            logger.info("Retry request [{}] was not successful", tryCount);
+                            tryCount++;
+                            // retry the request
+                            response = chain.proceed(request);
+                        }
+                        // otherwise just pass the original response on
+                        return response;
+                    }
+                }).build();
         return client;
     }
 
