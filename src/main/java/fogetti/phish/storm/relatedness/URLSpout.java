@@ -247,8 +247,7 @@ public class URLSpout extends BaseRichSpout {
         ackedPublished.incr();
     }
 
-    private void save(String msgId, Jedis jedis) {
-        String encodedURL = getEncodedURL(msgId);
+    private void save(String encodedURL, Jedis jedis) {
         logger.info("Saving [msgId={}]", encodedURL);
         jedis.rpush("saved:"+encodedURL, encodedURL);
         ackedSaved.incr();
