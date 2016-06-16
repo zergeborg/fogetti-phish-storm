@@ -10,7 +10,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Base64.Encoder;
 import java.util.List;
 
 import org.apache.storm.redis.common.config.JedisPoolConfig;
@@ -34,6 +37,7 @@ public class URLSpoutTest {
     private List<String> ackList;
     private String result;
     private JedisPoolConfig config;
+    private Encoder encoder = Base64.getEncoder();
 
 	private class TestDoubleURLSpout extends URLSpout {
 
@@ -80,9 +84,9 @@ public class URLSpoutTest {
         URLSpout spout = new TestDoubleURLSpout(urlDataFile, config);
 		SpoutOutputCollector spy = getSpy();
 		spout.open(null, mock(TopologyContext.class), spy);
-		String sezo1 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
-		String sezo2 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
-		String sezo3 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
+		String sezo1 = encoder.encodeToString("sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run".getBytes(StandardCharsets.UTF_8));
+		String sezo2 = encoder.encodeToString("sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run".getBytes(StandardCharsets.UTF_8));
+		String sezo3 = encoder.encodeToString("sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run".getBytes(StandardCharsets.UTF_8));
 		ackList.add(sezo1);
 		ackList.add(result);
 
@@ -104,9 +108,9 @@ public class URLSpoutTest {
 		URLSpout spout = new TestDoubleURLSpout(urlDataFile, config);
 		SpoutOutputCollector spy = getSpy();
 		spout.open(null, mock(TopologyContext.class), spy);
-		String url1 = "sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run";
-		String url2 = "www.smbctb.co.jp/JPGCB/JPS/portal/SignonLocaleSwitch.do?locale=en_JP";
-		String url3 = "tracking.binarypromos.com/aff_c?offer_id=1923&aff_id=5052&aff_sub=3014860850&aff_sub5=header";
+		String url1 = encoder.encodeToString("sezopoztos.com/paypalitlogin/us/webscr.html?cmd=login-run".getBytes(StandardCharsets.UTF_8));
+		String url2 = encoder.encodeToString("www.smbctb.co.jp/JPGCB/JPS/portal/SignonLocaleSwitch.do?locale=en_JP".getBytes(StandardCharsets.UTF_8));
+		String url3 = encoder.encodeToString("tracking.binarypromos.com/aff_c?offer_id=1923&aff_id=5052&aff_sub=3014860850&aff_sub5=header".getBytes(StandardCharsets.UTF_8));
         ackList.add(url1);
         ackList.add(result);
 
