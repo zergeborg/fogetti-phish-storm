@@ -53,9 +53,9 @@ public class PhishTopologyBuilder {
 		    .addConfiguration("timeout", 45000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
-		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 32)
+		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 64)
 			.shuffleGrouping("googletrends")
-			.setNumTasks(64);
+			.setNumTasks(128);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile))
             .globalGrouping("urlsource", SUCCESS_STREAM);
 		StormTopology topology = builder.createTopology();
