@@ -113,8 +113,11 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			    terms = mapper.readValue(segments, Terms.class);
 			}
 			if (terms == null || terms.terms == null || (terms.terms.isEmpty() && terms.retryCnt < 3)) {
-				logger.debug("Cached Google result not found for [segment={}]. Retry count [{}]", segment, terms.retryCnt);
-				terms.retryCnt++;
+				logger.debug("Cached Google result not found for [segment={}]", segment);
+				if (terms != null) {
+	                logger.debug("Retry count [{}]", terms.retryCnt);
+	                terms.retryCnt++;
+				}
 				terms = calculateSearches(segment);
 				googleTrendSuccess.incr();
 			} else {
