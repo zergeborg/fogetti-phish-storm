@@ -46,6 +46,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
     private transient CountMetric googleTrendOverLimit;
     private transient CountMetric googleSegmentLookupCnt;
     private transient CountMetric googleSegmentLookupSuccess;
+    private transient CountMetric googleSegmentRetryOver;
     private final File proxies;
     private List<String> proxyList;
     private ObjectMapper mapper;
@@ -92,6 +93,10 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
         context.registerMetric("google-seg-lookup-success",
                                googleSegmentLookupSuccess,
                                METRICS_WINDOW);
+        googleSegmentRetryOver = new CountMetric();
+        context.registerMetric("google-seg-retry-over",
+                               googleSegmentRetryOver,
+                               METRICS_WINDOW);
 	}
 	
 	public abstract WebClient buildClient();
@@ -107,11 +112,15 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 			if (segments != null) {
 			    terms = mapper.readValue(segments, Terms.class);
 			}
-			if (terms == null || terms.terms == null || terms.terms.isEmpty()) {
+			if (terms == null || terms.terms == null || (terms.terms.isEmpty() && terms.retryCnt++ < 3)) {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				terms = calculateSearches(segment);
 				googleTrendSuccess.incr();
 			} else {
+			    if (terms.retryCnt >= 3) {
+			        logger.debug("Google search was retried 3 times already");
+	                googleSegmentRetryOver.incr();
+			    }
 				logger.debug("Cached Google result found for [segment={}]", segment);
 				googleSegmentLookupSuccess.incr();
 			}

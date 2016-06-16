@@ -10,14 +10,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Terms implements Serializable {
 
     private static final long serialVersionUID = -3472432490997379521L;    
     private final ObjectMapper mapper = new ObjectMapper();
     public final List<Term> terms = new ArrayList<>();
+    public Integer retryCnt = 0;
     
     public Terms() {}
     
