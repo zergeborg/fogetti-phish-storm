@@ -21,7 +21,7 @@ public class PhishTopologyRemoteRunner {
 	               new Integer(16384));
 	    config.registerMetricsConsumer(LoggingMetricsConsumer.class, 1);
 		
-		StormSubmitter.submitTopology("phish-storm-topology", config, topology);
+		StormSubmitter.submitTopology("phish-storm", config, topology);
 	}
 	
 }
