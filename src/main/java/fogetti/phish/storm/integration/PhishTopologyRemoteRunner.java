@@ -11,7 +11,7 @@ public class PhishTopologyRemoteRunner {
 		StormTopology topology = PhishTopologyBuilder.build();
 		
 		Config config = new Config();
-		config.setNumWorkers(60);
+		config.setNumWorkers(17);
 		config.setMessageTimeoutSecs(180);
 		config.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE,
 	               new Integer(16384));
