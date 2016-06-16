@@ -10,22 +10,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.storm.metric.api.CountMetric;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.tuple.Values;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import fogetti.phish.storm.db.PublishMessage;
-import fogetti.phish.storm.exception.AckingFailedException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 
@@ -38,57 +34,14 @@ public class URLSpoutTest {
     private List<String> ackList;
     private String result;
     private JedisPoolConfig config;
-    private String publishMsg = "{\"allsent\":true,\"MLD\":null,\"MLDPS\":null,\"URL\":null,\"RDurl\":[],\"REMurl\":[],\"rdurl\":[],\"remurl\":[]}";
 
 	private class TestDoubleURLSpout extends URLSpout {
 
 		private static final long serialVersionUID = -7748829151740848266L;
 
-		private class SynchronousAcker implements IAcker {
-
-		    private final ObjectMapper mapper = new ObjectMapper();
-		    private final SpoutOutputCollector collector;
-
-		    public SynchronousAcker(SpoutOutputCollector collector, JedisPoolConfig config) {
-		        this.collector = collector;
-		    }
-		    
-		    @Override
-		    public void enqueue(String msgId) {
-                AckResult result = null;
-                try {
-                    List<String> messages = jedis.blpop(0, new String[]{"acked:"+msgId.toString()});
-                    if (messages != null) {
-                        result = mapper.readValue(messages.get(1), AckResult.class);
-                    } else {
-                        collector.reportError(new AckingFailedException(String.format("Acking [%s] has failed", msgId)));
-                    }
-                } catch (IOException e) {
-                    collector.reportError(e);
-                }
-                try {
-                    String msg = mapper.writeValueAsString(result);
-                    publish("phish", msg);
-                } catch (JsonProcessingException e) {
-                    collector.reportError(e);
-                }
-		    }
-
-		    private void publish(String channel, String msg) {
-	            PublishMessage message = new PublishMessage(channel, msg);
-	            jedis.rpush(message.channel, message.msg);
-		    }
-
-		}
-		
 		public TestDoubleURLSpout(String urlDataFile, JedisPoolConfig poolConfig) {
 			super(urlDataFile, poolConfig);
 		}
-
-        @Override
-        public IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried) {
-            return new SynchronousAcker(collector, config);
-        }
 
         @Override
         protected JedisCommands getInstance() {
@@ -142,7 +95,7 @@ public class URLSpoutTest {
 		spout.ack(sezo3);
 
 		// Then it calculates the public suffix of the given URL multiple times
-		verify(jedis, atLeast(3)).rpush("phish", publishMsg);
+		verify(spy, atLeast(3)).emit(anyString(), (Values)anyObject(), anyString());
 	}
 
 	@Test
@@ -166,7 +119,7 @@ public class URLSpoutTest {
 		spout.ack(url3);
 
 		// Then it calculates the public suffix of the given URL multiple times
-        verify(jedis, atLeast(3)).rpush("phish", publishMsg);
+        verify(spy, atLeast(3)).emit(anyString(), (Values)anyObject(), anyString());
 	}
 
 	protected SpoutOutputCollector getSpy() {

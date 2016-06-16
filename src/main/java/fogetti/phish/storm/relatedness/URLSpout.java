@@ -2,6 +2,7 @@ package fogetti.phish.storm.relatedness;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Decoder;
@@ -30,6 +31,8 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.exceptions.JedisException;
@@ -42,15 +45,17 @@ import redis.clients.jedis.exceptions.JedisException;
  * @author gergely.nagy
  *
  */
-public abstract class URLSpout extends BaseRichSpout {
+public class URLSpout extends BaseRichSpout {
 
-	private static final long serialVersionUID = -6424905468176142975L;
+    public static final String SUCCESS_STREAM = "success";
+
+    private static final long serialVersionUID = -6424905468176142975L;
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
+	
 	private SpoutOutputCollector collector;
 	private TreeSet<String> urllist;
 	private String urlDataFile;
 	private JedisPoolConfig config;
-    private IAcker acker;
     private Encoder encoder;
     private Decoder decoder;
     private String[] schemes = {"http","https"};
@@ -66,6 +71,7 @@ public abstract class URLSpout extends BaseRichSpout {
     private transient CountMetric spoutEmitted;
     private transient ReducedMetric spoutListSize;
     private JedisContainer container;
+    private ObjectMapper mapper;
 
 	public URLSpout(String urlDataFile, JedisPoolConfig config) {
 		this.urlDataFile = urlDataFile;
@@ -81,6 +87,7 @@ public abstract class URLSpout extends BaseRichSpout {
         this.decoder = Base64.getDecoder();
         this.urlValidator = new UrlValidator(schemes);
         this.container = (JedisContainer)JedisCommandsContainerBuilder.build(config);
+        this.mapper = new ObjectMapper();
         ackedPublished = new CountMetric();
         context.registerMetric("acked-published",
                                ackedPublished,
@@ -117,10 +124,7 @@ public abstract class URLSpout extends BaseRichSpout {
         context.registerMetric("spout-list-size",
                                spoutListSize,
                                METRICS_WINDOW);
-        this.acker = buildAcker(collector, config, ackedPublished, ackedSaved, ackedSkipped, ackedRetried);
 	}
-
-    public abstract IAcker buildAcker(SpoutOutputCollector collector, JedisPoolConfig config, CountMetric ackedPublished, CountMetric ackedSaved, CountMetric ackedSkipped, CountMetric ackedRetried);
 
 	private TreeSet<String> readURLListFromFile() {
 	    TreeSet<String> urls = new TreeSet<>();
@@ -183,18 +187,31 @@ public abstract class URLSpout extends BaseRichSpout {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declare(new Fields("url"));
+        declarer.declareStream(SUCCESS_STREAM, new Fields("url"));
 	}
 
 	@Override
 	public void ack(Object encodedURL) {
-	    logger.info("Acking [{}]", encodedURL);
-	    acker.enqueue(encodedURL.toString());
-	    spoutAcked.incr();
+	    logger.info("Acking [{}]", encodedURL.toString());
+	    String url = encodedURL.toString();
+        if (url.startsWith("result://")) {
+	        spoutAcked.incr();
+	        return;
+	    }
+	    try (Jedis jedis = (Jedis) getInstance()) {
+	        publish(url, jedis);
+	        save(url, jedis);
+	        spoutAcked.incr();
+	    } catch (IOException e) {
+	        logger.error("Acking ["+url+"] failed", e);
+        }
 	}
 
 	@Override
 	public void fail(Object encodedURL) {
-        String URL = getURL(encodedURL.toString());
+        String url = encodedURL.toString();
+        String resultRemovedUrl = StringUtils.removeStart(url, "result://");
+        String URL = getURL(resultRemovedUrl);
 		logger.debug("Message [msg={}] failed", URL);
 		if (urlValidator.isValid(URL)) {
 		    logger.warn("Requeueing [msg={}]", URL);
@@ -210,6 +227,31 @@ public abstract class URLSpout extends BaseRichSpout {
         String longURL = new String(decoded, StandardCharsets.UTF_8);
         String URL = StringUtils.substringBeforeLast(longURL, "#");
         return URL;
+    }
+
+    private void publish(String msgId, Jedis jedis) throws IOException {
+        AckResult result = null;
+        while (result == null) {
+            List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId});
+            if (messages != null) {
+                result = mapper.readValue(messages.get(1), AckResult.class);
+            } else {
+                logger.warn("Could not look up AckResult related to {}. Retrying.", msgId);
+                ackedRetried.incr();
+                continue;
+            }
+        }
+        String msg = mapper.writeValueAsString(result);
+        logger.info("Publishing [Message={}]", msg);
+        collector.emit(SUCCESS_STREAM, new Values(msg), "result://"+msg);
+        ackedPublished.incr();
+    }
+
+    private void save(String msgId, Jedis jedis) {
+        String encodedURL = getEncodedURL(msgId);
+        logger.info("Saving [msgId={}]", encodedURL);
+        jedis.rpush("saved:"+encodedURL, encodedURL);
+        ackedSaved.incr();
     }
 
     /**     

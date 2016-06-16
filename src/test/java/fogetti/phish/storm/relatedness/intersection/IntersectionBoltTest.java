@@ -37,7 +37,7 @@ public class IntersectionBoltTest {
 		private static final long serialVersionUID = 740985698253429447L;
 
 		public TestDoubleIntersectionBolt(IntersectionAction intersectionAction, JedisPoolConfig config, String resultDataFile) {
-			super(intersectionAction, config, resultDataFile);
+			super(config);
 		}
 		
 	    @Override

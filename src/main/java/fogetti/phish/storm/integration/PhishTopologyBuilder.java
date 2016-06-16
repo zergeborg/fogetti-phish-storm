@@ -1,18 +1,21 @@
 package fogetti.phish.storm.integration;
 
+import static fogetti.phish.storm.relatedness.URLSpout.SUCCESS_STREAM;
+
 import java.io.File;
 
 import org.apache.storm.generated.StormTopology;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
 
 import fogetti.phish.storm.client.WrappedRequest;
-import fogetti.phish.storm.relatedness.AsynchronousURLSpout;
 import fogetti.phish.storm.relatedness.ClientBuildingGoogleSemBolt;
 import fogetti.phish.storm.relatedness.MatcherBolt;
-import fogetti.phish.storm.relatedness.intersection.IntersectionAction;
+import fogetti.phish.storm.relatedness.URLSpout;
 import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
+import fogetti.phish.storm.relatedness.intersection.ResultBolt;
 
 public class PhishTopologyBuilder {
 
@@ -41,7 +44,7 @@ public class PhishTopologyBuilder {
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
-			.setSpout("urlsource", new AsynchronousURLSpout(urlDataFile, poolConfig), 1)
+			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(100);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .fieldsGrouping("urlsource", new Fields("url"))
@@ -50,16 +53,22 @@ public class PhishTopologyBuilder {
 		    .addConfiguration("timeout", 45000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
-		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile))
-			.globalGrouping("googletrends");
+		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 32)
+			.shuffleGrouping("googletrends")
+			.setNumTasks(64);
+        builder.setBolt("result", resultBolt(poolConfig, resultDataFile))
+            .globalGrouping("urlsource", SUCCESS_STREAM);
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}
 
-	private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
-		IntersectionAction action = new IntersectionAction() { private static final long serialVersionUID = 5105509799523060930L; @Override public void run() {} };
-		IntersectionBolt callback = new IntersectionBolt(action, poolConfig, resultDataFile);
+    private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
+		IntersectionBolt callback = new IntersectionBolt(poolConfig);
 		return callback;
 	}
+
+    private static IRichBolt resultBolt(JedisPoolConfig config, String resultDataFile) {
+        return new ResultBolt(config, resultDataFile);
+    }
 
 }
