@@ -9,8 +9,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
@@ -24,14 +22,14 @@ import fogetti.phish.storm.exception.QuotaLimitException;
 
 public class GoogleTrends {
 
-    private static final Logger logger = LoggerFactory.getLogger(GoogleTrends.class);
-
     private final String keyword;
     private final WebClient webClient;
     private final ProxyConfig proxyConfig;
+    private Integer connectTimeout;
 
 
-    private GoogleTrends(WebClient webClient, String keyword, ProxyConfig proxy) {
+    private GoogleTrends(WebClient webClient, String keyword, ProxyConfig proxy, Integer connectTimeout) {
+        this.connectTimeout = connectTimeout;
         if (webClient == null) {
             throw new NullPointerException();
         }
@@ -83,17 +81,9 @@ public class GoogleTrends {
     }
 
     private String buildHtml(String query) throws IOException {
-        webClient.setAjaxController(new NicelyResynchronizingAjaxController());
-        webClient.getOptions().setTimeout(60000);
+        webClient.getOptions().setTimeout(connectTimeout);
         webClient.getOptions().setProxyConfig(proxyConfig);
-        webClient.getOptions().setThrowExceptionOnScriptError(false);
-        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
-        webClient.getOptions().setCssEnabled(true);
-        webClient.getOptions().setRedirectEnabled(true);
         Page page = webClient.getPage(query);
-
-        webClient.waitForBackgroundJavaScript(10000);
-        webClient.waitForBackgroundJavaScriptStartingBefore(10000);
 
         if (page.isHtmlPage()) {
             final HtmlPage htmlPage = (HtmlPage) page;
@@ -155,7 +145,7 @@ public class GoogleTrends {
         }        
 
         public GoogleTrends build() {
-            return new GoogleTrends(buildClient(), keyword, proxyConfig);
+            return new GoogleTrends(buildClient(), keyword, proxyConfig, connectTimeout);
         }
     }
 

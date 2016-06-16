@@ -28,6 +28,8 @@ public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
         WebConnection webCon = new NoRetryWebConnection(webClient);
         webClient.setWebConnection(webCon);
         webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+        webClient.waitForBackgroundJavaScript(10000);
+        webClient.waitForBackgroundJavaScriptStartingBefore(10000);
         webClient.getOptions().setTimeout((int)timeout);
         webClient.getOptions().setThrowExceptionOnScriptError(false);
         webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
