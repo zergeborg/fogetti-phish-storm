@@ -51,6 +51,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
     private List<String> proxyList;
     private ObjectMapper mapper;
     protected long timeout;
+    private WebClient webclient;
     
     static {
         java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(Level.INFO); 
@@ -73,6 +74,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
         } catch (IOException e) {
             logger.error("Preparing the Google SEM bolt failed", e);
         }
+		webclient = buildClient();
 		googleTrendSuccess = new CountMetric();
 		context.registerMetric("google-tr-success",
 		                       googleTrendSuccess,
@@ -116,9 +118,9 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 				logger.debug("Cached Google result not found for [segment={}]", segment);
 				if (terms != null) {
 	                logger.debug("Retry count [{}]", terms.retryCnt);
-	                terms.retryCnt++;
 				}
 				terms = calculateSearches(segment);
+				terms.retryCnt++;
 				googleTrendSuccess.incr();
 			} else {
 			    if (terms.retryCnt >= 3) {
@@ -156,7 +158,7 @@ public abstract class GoogleSemBolt extends AbstractRedisBolt {
 		String[] hostAndPort = nextProxy.split(":");
         ProxyConfig proxyConfig = new ProxyConfig(hostAndPort[0],Integer.parseInt(hostAndPort[1]));
         Builder builder = new GoogleTrends.Builder(proxyConfig, URLEncoder.encode(segment, "UTF-8"))
-                .setHttpClient(buildClient())
+                .setHttpClient(webclient)
                 .setConnectTimeout((int)timeout);
 		GoogleTrends client = builder.build();
 		result.add(client.topSearches());
