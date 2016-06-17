@@ -209,16 +209,20 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void fail(Object encodedURL) {
-        String url = encodedURL.toString();
-        String resultRemovedUrl = StringUtils.removeStart(url, "result://");
-        String URL = getURL(resultRemovedUrl);
-		logger.debug("Message [msg={}] failed", URL);
-		if (urlValidator.isValid(URL)) {
-		    logger.warn("Requeueing [msg={}]", URL);
-		    urllist.add(URL);
-		} else {
-		    logger.warn("Skipping invalid URL [msg={}]", URL);
-		}
+	    String url = encodedURL.toString();
+	    try {
+	        String resultRemovedUrl = StringUtils.removeStart(url, "result://");
+	        String URL = getURL(resultRemovedUrl);
+	        logger.debug("Message [msg={}] failed", URL);
+	        if (urlValidator.isValid(URL)) {
+	            logger.warn("Requeueing [msg={}]", URL);
+	            urllist.add(URL);
+	        } else {
+	            logger.warn("Skipping invalid URL [msg={}]", URL);
+	        }
+	    } catch(IllegalArgumentException e) {
+	        logger.error("["+encodedURL+"] failed", e);
+	    }
 		spoutFailed.incr();
 	}
 
