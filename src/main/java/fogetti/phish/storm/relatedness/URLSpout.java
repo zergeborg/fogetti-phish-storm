@@ -50,6 +50,7 @@ import redis.clients.jedis.exceptions.JedisException;
 public class URLSpout extends BaseRichSpout {
 
     public static final String SUCCESS_STREAM = "success";
+    public static final String INTERSECTION_STREAM = "intersect";
 
     private static final long serialVersionUID = -6424905468176142975L;
 	private static final Logger logger = LoggerFactory.getLogger(URLSpout.class);
@@ -179,6 +180,7 @@ public class URLSpout extends BaseRichSpout {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		declarer.declare(new Fields("url"));
+        declarer.declareStream(INTERSECTION_STREAM, new Fields("url"));
         declarer.declareStream(SUCCESS_STREAM, new Fields("url"));
 	}
 
@@ -190,8 +192,23 @@ public class URLSpout extends BaseRichSpout {
 	        spoutAcked.incr();
 	        return;
 	    }
-        String resURL = StringUtils.removeStart(URL, "result://");
-        String encoded = encoder.encodeToString(resURL.getBytes(StandardCharsets.UTF_8));
+        if (URL.startsWith("intersect://")) {
+            ackRegular(URL);
+            return;
+        }
+        ackIntersection(URL);
+	}
+
+    private void ackIntersection(String URL) {
+        logger.info("Intersecting [Message={}]", URL);
+        String resmsg = "intersect://"+URL;
+        String encodedMsg = encoder.encodeToString(resmsg.getBytes(StandardCharsets.UTF_8));
+        collector.emit(INTERSECTION_STREAM, new Values(encodedMsg), encodedMsg);
+        spoutAcked.incr();
+    }
+
+    private void ackRegular(String URL) {
+        String encoded = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
 	    try (Jedis jedis = (Jedis) getInstance()) {
 	        AckResult result = findAckResult(encoded, jedis);
 	        if (result != null) {
@@ -200,9 +217,9 @@ public class URLSpout extends BaseRichSpout {
 	        }
 	        spoutAcked.incr();
 	    } catch (IOException e) {
-	        logger.error("Acking ["+resURL+"] failed", e);
+	        logger.error("Acking ["+URL+"] failed", e);
         }
-	}
+    }
 
 	@Override
 	public void fail(Object encodedURL) {

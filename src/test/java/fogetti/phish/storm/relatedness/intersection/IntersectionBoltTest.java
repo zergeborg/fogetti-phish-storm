@@ -17,6 +17,7 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +27,7 @@ import fogetti.phish.storm.client.Terms;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCommands;
 
+@Ignore
 public class IntersectionBoltTest {
 	
 	private String paypal;

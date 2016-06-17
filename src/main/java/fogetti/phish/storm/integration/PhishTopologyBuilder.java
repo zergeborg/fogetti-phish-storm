@@ -1,5 +1,6 @@
 package fogetti.phish.storm.integration;
 
+import static fogetti.phish.storm.relatedness.URLSpout.INTERSECTION_STREAM;
 import static fogetti.phish.storm.relatedness.URLSpout.SUCCESS_STREAM;
 
 import java.io.File;
@@ -16,6 +17,7 @@ import fogetti.phish.storm.relatedness.MatcherBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
 import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 import fogetti.phish.storm.relatedness.intersection.ResultBolt;
+import fogetti.phish.storm.relatedness.intersection.SegmentSavingBolt;
 
 public class PhishTopologyBuilder {
 
@@ -53,14 +55,22 @@ public class PhishTopologyBuilder {
 		    .addConfiguration("timeout", 5000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
-		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 64)
+		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig, resultDataFile), 32)
 			.shuffleGrouping("googletrends")
 			.setNumTasks(128);
+        builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 32)
+            .shuffleGrouping("urlsource", INTERSECTION_STREAM)
+            .setNumTasks(128);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile))
             .globalGrouping("urlsource", SUCCESS_STREAM);
 		StormTopology topology = builder.createTopology();
 		return topology;
 	}
+
+    private static SegmentSavingBolt segmentSavingBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
+        SegmentSavingBolt callback = new SegmentSavingBolt(poolConfig);
+        return callback;
+    }
 
     private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
 		IntersectionBolt callback = new IntersectionBolt(poolConfig);

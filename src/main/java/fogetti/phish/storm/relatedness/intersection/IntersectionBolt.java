@@ -20,10 +20,10 @@ import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fogetti.phish.storm.client.Terms;
+import fogetti.phish.storm.relatedness.AckResult;
 import redis.clients.jedis.Jedis;
 
 public class IntersectionBolt extends AbstractRedisBolt {
@@ -35,7 +35,6 @@ public class IntersectionBolt extends AbstractRedisBolt {
     private Decoder decoder;
     private Encoder encoder;
     private final int METRICS_WINDOW = 10;
-    private transient CountMetric intersectionSegmentSaved;
     private transient CountMetric intersectionIndexKeyUpdated;
     private transient CountMetric intersectionIndexKeyCreated;
 
@@ -50,10 +49,6 @@ public class IntersectionBolt extends AbstractRedisBolt {
 		this.decoder = Base64.getDecoder();
 		this.encoder = Base64.getEncoder();
 		this.mapper = new ObjectMapper();
-        intersectionSegmentSaved = new CountMetric();
-        context.registerMetric("int-segment-saved",
-                               intersectionSegmentSaved,
-                               METRICS_WINDOW);
         intersectionIndexKeyUpdated = new CountMetric();
         context.registerMetric("int-index-key-updated",
                                intersectionIndexKeyUpdated,
@@ -66,12 +61,57 @@ public class IntersectionBolt extends AbstractRedisBolt {
 
 	@Override
 	public void execute(Tuple input) {
-		Terms terms = (Terms) input.getValue(0);
-		String segment = input.getStringByField("word");
-		save(input, segment, terms);
-		updateSegmentIndex(input, terms, segment, getEncodedShortURL(input));
-		collector.ack(input);
+		String url = getEncodedShortURL(input);
+        try (Jedis jedis = (Jedis) getInstance()) {
+            AckResult ackResult = findAckResult(url, jedis);
+            if (ackResult == null) {
+                logger.warn("AckResult was null for the input URL [{}]", url);
+                collector.fail(input);
+                return;
+            }
+            updateRDsegments(input, url, jedis, ackResult);
+            updateREMsegments(input, url, jedis, ackResult);
+            collector.ack(input);
+        } catch (IOException e) {
+            logger.error("Executing intersection failed", e);
+            collector.fail(input);
+        }
 	}
+
+    private AckResult findAckResult(String url, Jedis jedis) throws IOException {
+        AckResult result = null;
+        String message = jedis.get("acked:"+url);
+        if (message != null) {
+            result = mapper.readValue(message, AckResult.class);
+        } else {
+            logger.warn("Could not look up AckResult related to [{}]", url);
+            return null;
+        }
+        return result;
+    }
+    
+    private void updateRDsegments(Tuple input, String url, Jedis jedis, AckResult ackResult) throws IOException {
+        for (String segment : ackResult.RDurl) {
+            Terms terms = findTerms(segment, jedis);
+            if (terms != null) updateSegmentIndex(input, terms, segment, url, jedis);
+        }
+    }
+
+    private void updateREMsegments(Tuple input, String url, Jedis jedis, AckResult ackResult) throws IOException {
+        for (String segment : ackResult.REMurl) {
+            Terms terms = findTerms(segment, jedis);
+            if (terms != null) updateSegmentIndex(input, terms, segment, url, jedis);
+        }
+    }
+
+    private Terms findTerms(String segment, Jedis jedis) throws IOException {
+        String segments = jedis.get(REDIS_SEGMENT_PREFIX + segment);
+        Terms terms = null;
+        if (segments != null) {
+            terms = mapper.readValue(segments, Terms.class);
+        }
+        return terms;
+    }
 
     private String getEncodedShortURL(Tuple input) {
         String encodedURL = input.getStringByField("url");
@@ -82,23 +122,9 @@ public class IntersectionBolt extends AbstractRedisBolt {
         return encodedShortURL;
     }
 
-	private void save(Tuple input, String segment, Terms termset) {
-        try (Jedis jedis = (Jedis) getInstance()) {
-	        String key = REDIS_SEGMENT_PREFIX + segment;
-            logger.debug("Saving new segment [segment={}] and [termset={}] to Redis", segment, termset);
-            String termString = mapper.writeValueAsString(termset);
-            jedis.set(key, termString);
-            intersectionSegmentSaved.incr();
-		} catch (JsonProcessingException e) {
-		    logger.error("Could not save the segment into Redis", e);
-		    collector.fail(input);
-		}
-
-	}
-
-	private void updateSegmentIndex(Tuple input, Terms terms, String segment, String url) {
+	private void updateSegmentIndex(Tuple input, Terms terms, String segment, String url, Jedis jedis) {
 	    String key = REDIS_INTERSECTION_PREFIX + url;
-	    try (Jedis jedis = (Jedis) getInstance()) {
+	    try {
 	        if (jedis.exists(key)) {
 	            Map<String, String> rawSegments = jedis.hgetAll(key);
 	            URLSegments urlsegments = URLSegments.fromStringMap(rawSegments);
