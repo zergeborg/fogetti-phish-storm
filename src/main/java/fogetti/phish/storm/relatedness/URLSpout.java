@@ -236,15 +236,13 @@ public class URLSpout extends BaseRichSpout {
 
     private void publish(String msgId, Jedis jedis) throws IOException {
         AckResult result = null;
-        while (result == null) {
-            List<String> messages = jedis.blpop(1, new String[]{"acked:"+msgId});
-            if (messages != null) {
-                result = mapper.readValue(messages.get(1), AckResult.class);
-            } else {
-                logger.warn("Could not look up AckResult related to {}. Retrying.", msgId);
-                ackedRetried.incr();
-                continue;
-            }
+        List<String> messages = jedis.blpop(5, new String[]{"acked:"+msgId});
+        if (messages != null) {
+            result = mapper.readValue(messages.get(1), AckResult.class);
+        } else {
+            logger.warn("Could not look up AckResult related to {}. Retrying.", msgId);
+            ackedRetried.incr();
+            throw new RuntimeException("Could not look up AckResult");
         }
         String msg = mapper.writeValueAsString(result);
         logger.info("Publishing [Message={}]", msg);
