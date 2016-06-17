@@ -50,7 +50,7 @@ public class PhishTopologyBuilder {
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(1);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
-		    .addConfiguration("timeout", 45000)
+		    .addConfiguration("timeout", 5000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
 		builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 64)

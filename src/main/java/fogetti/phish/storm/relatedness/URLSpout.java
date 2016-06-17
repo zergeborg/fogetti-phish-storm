@@ -192,33 +192,34 @@ public class URLSpout extends BaseRichSpout {
 
 	@Override
 	public void ack(Object encodedURL) {
-	    logger.info("Acking [{}]", encodedURL.toString());
-	    String url = encodedURL.toString();
-        if (url.startsWith("result://")) {
+	    String URL = getURL(encodedURL.toString());
+	    logger.info("Acking [{}]", URL);
+        if (URL.startsWith("result://")) {
 	        spoutAcked.incr();
 	        return;
 	    }
+        String resURL = StringUtils.removeStart(URL, "result://");
+        String encoded = encoder.encodeToString(resURL.getBytes(StandardCharsets.UTF_8));
 	    try (Jedis jedis = (Jedis) getInstance()) {
-	        publish(url, jedis);
-	        save(url, jedis);
+	        publish(encoded, jedis);
+	        save(encoded, jedis);
 	        spoutAcked.incr();
 	    } catch (IOException e) {
-	        logger.error("Acking ["+url+"] failed", e);
+	        logger.error("Acking ["+resURL+"] failed", e);
         }
 	}
 
 	@Override
 	public void fail(Object encodedURL) {
-	    String url = encodedURL.toString();
 	    try {
-	        String resultRemovedUrl = StringUtils.removeStart(url, "result://");
-	        String URL = getURL(resultRemovedUrl);
-	        logger.debug("Message [msg={}] failed", URL);
-	        if (urlValidator.isValid(URL)) {
-	            logger.warn("Requeueing [msg={}]", URL);
-	            urllist.add(URL);
+	        String URL = getURL(encodedURL.toString());
+	        String resURL = StringUtils.removeStart(URL, "result://");
+	        logger.debug("Message [msg={}] failed", resURL);
+	        if (urlValidator.isValid(resURL)) {
+	            logger.warn("Requeueing [msg={}]", resURL);
+	            urllist.add(resURL);
 	        } else {
-	            logger.warn("Skipping invalid URL [msg={}]", URL);
+	            logger.warn("Skipping invalid URL [msg={}]", resURL);
 	        }
 	    } catch(IllegalArgumentException e) {
 	        logger.error("["+encodedURL+"] failed", e);
@@ -247,7 +248,9 @@ public class URLSpout extends BaseRichSpout {
         }
         String msg = mapper.writeValueAsString(result);
         logger.info("Publishing [Message={}]", msg);
-        collector.emit(SUCCESS_STREAM, new Values(msg), "result://"+msg);
+        String resmsg = "result://"+msg;
+        String encodedMsg = encoder.encodeToString(resmsg.getBytes(StandardCharsets.UTF_8));
+        collector.emit(SUCCESS_STREAM, new Values(msg), encodedMsg);
         ackedPublished.incr();
     }
 

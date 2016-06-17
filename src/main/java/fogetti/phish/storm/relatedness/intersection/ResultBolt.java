@@ -41,8 +41,8 @@ public class ResultBolt extends AbstractRedisBolt {
     private String resultDataFile;
     private ObjectMapper mapper;
     private final int METRICS_WINDOW = 10;
-    private int connectTimeout = 30000;
-    private int socketTimeout = 30000;
+    private int connectTimeout = 10000;
+    private int socketTimeout = 10000;
     private Encoder encoder;
     private transient CountMetric intersectionMsgLookupSuccess;
     private transient CountMetric intersectionMsgLookupFailure;
