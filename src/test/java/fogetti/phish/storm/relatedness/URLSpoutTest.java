@@ -1,6 +1,5 @@
 package fogetti.phish.storm.relatedness;
 
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
@@ -61,7 +60,7 @@ public class URLSpoutTest {
         AckResult ack = new AckResult();
         ack.setAllsent(true);
         result = mapper.writeValueAsString(ack);
-        when(jedis.blpop(anyInt(), (String[])anyObject())).thenReturn(ackList);
+        when(jedis.get(anyString())).thenReturn(result);
 	}
 
 	@Test
