@@ -1,5 +1,7 @@
 package fogetti.phish.storm.relatedness;
 
+import static fogetti.phish.storm.integration.PhishTopologyBuilder.REDIS_SEGMENT_PREFIX;
+
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
@@ -122,10 +124,12 @@ public class MatcherBolt extends AbstractRedisBolt {
                 String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
                 ack.URL = shortURL;
                 calculate(shortURL);
-                if (saveResult(encodedURL)) {
-                    emit(input, encodedURL);
-                } else {
-                    collector.fail(input);
+                try (Jedis jedis = (Jedis) getInstance()) {
+                    if (saveResult(encodedURL, jedis)) {
+                        emit(input, encodedURL, jedis);
+                    } else {
+                        collector.fail(input);
+                    }
                 }
             } else {
                 logger.warn("Invalid URL [{}]. Skipping emission", schemedUrl);
@@ -175,10 +179,8 @@ public class MatcherBolt extends AbstractRedisBolt {
         return matcher;
     }
 
-    private boolean saveResult(String encodedURL) {
-        Jedis jedis = null;
+    private boolean saveResult(String encodedURL, Jedis jedis) {
         try {
-            jedis = (Jedis) getInstance();
             List<String> message = jedis.lrange("acked:"+encodedURL, 0L, 0L);
             if (message == null || message.isEmpty()) {
                 String result = mapper.writeValueAsString(ack);
@@ -194,16 +196,22 @@ public class MatcherBolt extends AbstractRedisBolt {
         return true;
     }
 
-    private void emit(Tuple input, String encodedURL) {
+    private void emit(Tuple input, String encodedURL, Jedis jedis) {
         for (String word : ack.getRDurl()) {
-            logger.debug("Emitting [{}]", word);
-            collector.emit(input, new Values(word, encodedURL));
-            matcherEmittedRDSegment.incr();
+            String segments = jedis.get(REDIS_SEGMENT_PREFIX + word);
+            if (segments == null) {
+                logger.debug("Emitting [{}]", word);
+                collector.emit(input, new Values(word, encodedURL));
+                matcherEmittedRDSegment.incr();
+            }
         }
         for (String word : ack.getREMurl()) {
-            logger.debug("Emitting [{}]", word);
-            collector.emit(input, new Values(word, encodedURL));
-            matcherEmittedREMSegment.incr();
+            String segments = jedis.get(REDIS_SEGMENT_PREFIX + word);
+            if (segments == null) {
+                logger.debug("Emitting [{}]", word);
+                collector.emit(input, new Values(word, encodedURL));
+                matcherEmittedREMSegment.incr();
+            }
         }
         logger.debug("Acking [{}]", input);
         collector.ack(input);
