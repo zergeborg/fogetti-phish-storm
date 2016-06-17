@@ -181,8 +181,8 @@ public class MatcherBolt extends AbstractRedisBolt {
 
     private boolean saveResult(String encodedURL, Jedis jedis) {
         try {
-            List<String> message = jedis.lrange("acked:"+encodedURL, 0L, 0L);
-            if (message == null || message.isEmpty()) {
+            String message = jedis.get("acked:"+encodedURL);
+            if (StringUtils.isBlank(message)) {
                 String result = mapper.writeValueAsString(ack);
                 logger.info("Saving [AckResult={}]", result);
                 jedis.set("acked:"+encodedURL, result);
