@@ -193,7 +193,8 @@ public class URLSpout extends BaseRichSpout {
 	        return;
 	    }
         if (URL.startsWith("intersect://")) {
-            ackRegular(URL);
+            String shortURL = StringUtils.removeStart(URL, "intersect://");
+            ackRegular(shortURL);
             return;
         }
         ackIntersection(URL);
@@ -202,8 +203,9 @@ public class URLSpout extends BaseRichSpout {
     private void ackIntersection(String URL) {
         logger.info("Intersecting [Message={}]", URL);
         String resmsg = "intersect://"+URL;
-        String encodedMsg = encoder.encodeToString(resmsg.getBytes(StandardCharsets.UTF_8));
-        collector.emit(INTERSECTION_STREAM, new Values(encodedMsg), encodedMsg);
+        String encodedURL = encoder.encodeToString(URL.getBytes(StandardCharsets.UTF_8));
+        String encodedMsgId = encoder.encodeToString(resmsg.getBytes(StandardCharsets.UTF_8));
+        collector.emit(INTERSECTION_STREAM, new Values(encodedURL), encodedMsgId);
         spoutAcked.incr();
     }
 
