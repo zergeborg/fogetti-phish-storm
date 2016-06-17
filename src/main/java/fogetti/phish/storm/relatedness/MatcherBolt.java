@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +48,7 @@ public class MatcherBolt extends AbstractRedisBolt {
     private AckResult ack;
     private ObjectMapper mapper;
     private Decoder decoder;
+    private Encoder encoder;
     private String[] schemes = {"http","https"};
     private UrlValidator urlValidator;
     private transient CountMetric matcherEmittedRDSegment;
@@ -72,6 +74,7 @@ public class MatcherBolt extends AbstractRedisBolt {
         this.lookup = readCountFromFile();
         this.mapper = new ObjectMapper();
         this.decoder = Base64.getDecoder();
+        this.encoder = Base64.getEncoder();
         this.urlValidator = new UrlValidator(schemes);
         matcherEmittedRDSegment = new CountMetric();
         context.registerMetric("match-emitted-rd-segment",
@@ -118,27 +121,32 @@ public class MatcherBolt extends AbstractRedisBolt {
         try {
             createNewAckResult();
             String encodedURL = input.getStringByField("url");
-            byte[] decodedURL = decoder.decode(encodedURL);
-            String schemedUrl = new String(decodedURL, StandardCharsets.UTF_8);
-            if (urlValidator.isValid(schemedUrl)) {
-                String shortURL = StringUtils.substringBeforeLast(schemedUrl, "#");
+            String shortURL = getURL(encodedURL);
+            if (urlValidator.isValid(shortURL)) {
                 ack.URL = shortURL;
                 calculate(shortURL);
                 try (Jedis jedis = (Jedis) getInstance()) {
-                    if (saveResult(encodedURL, jedis)) {
+                    if (saveResult(shortURL, jedis)) {
                         emit(input, encodedURL, jedis);
                     } else {
                         collector.fail(input);
                     }
                 }
             } else {
-                logger.warn("Invalid URL [{}]. Skipping emission", schemedUrl);
+                logger.warn("Invalid URL [{}]. Skipping emission", shortURL);
                 collector.fail(input);
             }
         } catch(Exception e) {
             logger.error("Unexpected error", e);
             collector.fail(input);
         }
+    }
+
+    private String getURL(String encodedURL) {
+        byte[] decoded = decoder.decode(encodedURL);
+        String longURL = new String(decoded, StandardCharsets.UTF_8);
+        String URL = StringUtils.substringBeforeLast(longURL, "#");
+        return URL;
     }
 
     void createNewAckResult() {
@@ -179,8 +187,9 @@ public class MatcherBolt extends AbstractRedisBolt {
         return matcher;
     }
 
-    private boolean saveResult(String encodedURL, Jedis jedis) {
+    private boolean saveResult(String decodedURL, Jedis jedis) {
         try {
+            String encodedURL = encoder.encodeToString(decodedURL.getBytes(StandardCharsets.UTF_8));
             String message = jedis.get("acked:"+encodedURL);
             if (StringUtils.isBlank(message)) {
                 String result = mapper.writeValueAsString(ack);
