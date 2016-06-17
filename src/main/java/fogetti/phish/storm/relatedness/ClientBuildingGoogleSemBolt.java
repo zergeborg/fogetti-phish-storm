@@ -9,6 +9,7 @@ import org.apache.storm.redis.common.config.JedisPoolConfig;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.HttpWebConnection;
 import com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController;
+import com.gargoylesoftware.htmlunit.ThreadedRefreshHandler;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebConnection;
 
@@ -28,6 +29,7 @@ public class ClientBuildingGoogleSemBolt extends GoogleSemBolt {
         WebConnection webCon = new NoRetryWebConnection(webClient);
         webClient.setWebConnection(webCon);
         webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+        webClient.setRefreshHandler(new ThreadedRefreshHandler());
         webClient.waitForBackgroundJavaScript(10000);
         webClient.waitForBackgroundJavaScriptStartingBefore(10000);
         webClient.getOptions().setTimeout((int)timeout);
