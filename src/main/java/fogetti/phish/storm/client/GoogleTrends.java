@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -18,6 +18,7 @@ import com.gargoylesoftware.htmlunit.TextPage;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import fogetti.phish.storm.exception.NotEnoughSearchVolumeException;
 import fogetti.phish.storm.exception.QuotaLimitException;
 
 public class GoogleTrends {
@@ -25,11 +26,8 @@ public class GoogleTrends {
     private final String keyword;
     private final WebClient webClient;
     private final ProxyConfig proxyConfig;
-    private Integer connectTimeout;
 
-
-    private GoogleTrends(WebClient webClient, String keyword, ProxyConfig proxy, Integer connectTimeout) {
-        this.connectTimeout = connectTimeout;
+    private GoogleTrends(WebClient webClient, String keyword, ProxyConfig proxy) {
         if (webClient == null) {
             throw new NullPointerException();
         }
@@ -39,7 +37,6 @@ public class GoogleTrends {
     }
 
     public Set<Term> topSearches() throws IOException {
-        Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=TOP_QUERIES_0_0", keyword);
         String html = buildHtml(query);
@@ -48,6 +45,7 @@ public class GoogleTrends {
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
+            Set<Term> result = new HashSet<>();
             for (Element row : table.select("tr")) {
                 Elements tds = row.select("td > span:first-child");
                 if (!tds.isEmpty()) {
@@ -55,12 +53,12 @@ public class GoogleTrends {
                     if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
                 }
             }
+            return result;
         }
-        return result;
+        return null;
     }
 
     public Set<Term> risingSearches() throws IOException {
-        Set<Term> result = new HashSet<>();
         String query
             = String.format("http://www.google.com/trends/fetchComponent?hl=en-US&q=%s&cid=RISING_QUERIES_0_0", keyword);
         String html = buildHtml(query);
@@ -69,6 +67,7 @@ public class GoogleTrends {
         Elements mainElem = doc.select(".trends-table-data");
         if (mainElem.size() > 0) {
             Element table = mainElem.get(0);
+            Set<Term> result = new HashSet<>();
             for (Element row : table.select("tr")) {
                 Elements tds = row.select("td > span:first-child");
                 if (!tds.isEmpty()) {
@@ -76,12 +75,12 @@ public class GoogleTrends {
                     if (StringUtils.isNotBlank(text)) result.add(new Term(text.split("\\s+")));
                 }
             }
+            return result;
         }
-        return result;
+        return null;
     }
 
     private String buildHtml(String query) throws IOException {
-        webClient.getOptions().setTimeout(connectTimeout);
         webClient.getOptions().setProxyConfig(proxyConfig);
         Page page = webClient.getPage(query);
 
@@ -99,6 +98,17 @@ public class GoogleTrends {
     }
 
     private void findError(Document doc) {
+        Elements mainElem = doc.select(".trends-component-error");
+        if (mainElem.size() > 0) {
+            Element table = mainElem.get(0);
+            for (Element row : table.select("tr")) {
+                Elements tds = row.select("td");
+                if (!tds.isEmpty()) {
+                    String error = tds.get(0).text();
+                    if (error.contains("Not enough search volume to show results")) throw new NotEnoughSearchVolumeException();
+                }
+            }
+        }
         Elements errorDiv = doc.select(".errorSubTitle");
         if (errorDiv.isEmpty()) return;
         String error = errorDiv.get(0).text();
@@ -145,7 +155,7 @@ public class GoogleTrends {
         }        
 
         public GoogleTrends build() {
-            return new GoogleTrends(buildClient(), keyword, proxyConfig, connectTimeout);
+            return new GoogleTrends(buildClient(), keyword, proxyConfig);
         }
     }
 

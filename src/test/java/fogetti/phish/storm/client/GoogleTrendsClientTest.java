@@ -1,6 +1,5 @@
 package fogetti.phish.storm.client;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
@@ -17,6 +16,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.gargoylesoftware.htmlunit.ProxyConfig;
 
+import fogetti.phish.storm.exception.NotEnoughSearchVolumeException;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
@@ -143,8 +143,12 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
             = new GoogleTrends.Builder(proxyConfig, "valami").setHttpClient(WebClientUtil.getMockedWebClient("empty-top-searches.html"));
         GoogleTrends client = builder.build();
-        Set<Term> topSearches = client.topSearches();
-        assertEquals("There were unexpected top searches", 0, topSearches.size());
+        try {
+            client.topSearches();
+            fail("Empty top searches should have thrown an exception");
+        } catch (NotEnoughSearchVolumeException e) {
+            //
+        }
     }
 
     @Test
@@ -163,8 +167,12 @@ public class GoogleTrendsClientTest {
         GoogleTrends.Builder builder
             = new GoogleTrends.Builder(proxyConfig, "valami").setHttpClient(WebClientUtil.getMockedWebClient("empty-rising-searches.html"));
         GoogleTrends client = builder.build();
-        Set<Term> topSearches = client.risingSearches();
-        assertEquals("There were unexpected top searches", 0, topSearches.size());
+        try {
+            client.risingSearches();
+            fail("Empty rising searches should have thrown an exception");
+        } catch (NotEnoughSearchVolumeException e) {
+            //
+        }
     }
 
     @Test
