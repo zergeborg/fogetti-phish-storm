@@ -278,7 +278,6 @@ public class MatcherBolt extends AbstractRedisBolt {
         if (memomap.containsKey(text)) {
             return memomap.get(text);
         } else {
-            System.out.println("Searching result for: "+text);
             List<String> result = findResult(text);
             memomap.put(text, result);
             return result;
