@@ -185,13 +185,11 @@ public class MatcherBolt extends AbstractRedisBolt {
             if (message == null || message.isEmpty()) {
                 String result = mapper.writeValueAsString(ack);
                 logger.info("Saving [AckResult={}]", result);
-                jedis.rpush("acked:"+encodedURL, result);
+                jedis.set("acked:"+encodedURL, result);
             }
         } catch (JsonProcessingException e) {
             logger.error("Could not save AckResult", e);
             return false;
-        } finally {
-            returnInstance(jedis);
         }
         return true;
     }

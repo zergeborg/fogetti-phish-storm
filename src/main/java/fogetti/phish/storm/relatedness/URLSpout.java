@@ -31,6 +31,8 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import redis.clients.jedis.Jedis;
@@ -63,8 +65,6 @@ public class URLSpout extends BaseRichSpout {
     private final int METRICS_WINDOW = 10;
     private transient CountMetric ackedPublished;
     private transient CountMetric ackedSaved;
-    private transient CountMetric ackedSkipped;
-    private transient CountMetric ackedRetried;
     private transient CountMetric spoutAcked;
     private transient CountMetric spoutSkipped;
     private transient CountMetric spoutFailed;
@@ -95,14 +95,6 @@ public class URLSpout extends BaseRichSpout {
         ackedSaved = new CountMetric();
         context.registerMetric("acked-saved",
                                ackedSaved,
-                               METRICS_WINDOW);
-        ackedSkipped = new CountMetric();
-        context.registerMetric("acked-skipped",
-                               ackedSkipped,
-                               METRICS_WINDOW);
-        ackedRetried = new CountMetric();
-        context.registerMetric("acked-retried",
-                               ackedRetried,
                                METRICS_WINDOW);
         spoutAcked = new CountMetric();
         context.registerMetric("spout-acked",
@@ -201,8 +193,11 @@ public class URLSpout extends BaseRichSpout {
         String resURL = StringUtils.removeStart(URL, "result://");
         String encoded = encoder.encodeToString(resURL.getBytes(StandardCharsets.UTF_8));
 	    try (Jedis jedis = (Jedis) getInstance()) {
-	        publish(encoded, jedis);
-	        save(encoded, jedis);
+	        AckResult result = findAckResult(encoded, jedis);
+	        if (result != null) {
+    	        publish(result);
+    	        save(encoded, jedis);
+	        }
 	        spoutAcked.incr();
 	    } catch (IOException e) {
 	        logger.error("Acking ["+resURL+"] failed", e);
@@ -234,16 +229,20 @@ public class URLSpout extends BaseRichSpout {
         return URL;
     }
 
-    private void publish(String msgId, Jedis jedis) throws IOException {
+    private AckResult findAckResult(String msgId, Jedis jedis)
+            throws IOException, JsonParseException, JsonMappingException {
         AckResult result = null;
-        List<String> messages = jedis.blpop(5, new String[]{"acked:"+msgId});
-        if (messages != null) {
-            result = mapper.readValue(messages.get(1), AckResult.class);
+        String message = jedis.get("acked:"+msgId);
+        if (message != null) {
+            result = mapper.readValue(message, AckResult.class);
         } else {
             logger.warn("Could not look up AckResult related to {}. Retrying.", msgId);
-            ackedRetried.incr();
-            throw new RuntimeException("Could not look up AckResult");
+            return null;
         }
+        return result;
+    }
+    
+    private void publish(AckResult result) throws IOException {
         String msg = mapper.writeValueAsString(result);
         logger.info("Publishing [Message={}]", msg);
         String resmsg = "result://"+msg;
