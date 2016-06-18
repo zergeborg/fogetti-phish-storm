@@ -52,7 +52,7 @@ public class PhishTopologyBuilder {
             .allGrouping("urlsource")
             .setNumTasks(128);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
-		    .addConfiguration("timeout", 15000)
+		    .addConfiguration("timeout", 30000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
