@@ -46,14 +46,14 @@ public class PhishTopologyBuilder {
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
-			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 8)
-			.setMaxSpoutPending(25)
+			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 2)
+			.setMaxSpoutPending(1000)
 			.setNumTasks(16);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
             .fieldsGrouping("urlsource", new Fields("url"))
             .setNumTasks(64);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 1536)
-		    .addConfiguration("timeout", 15000)
+		    .addConfiguration("timeout", 30000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(2048);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
