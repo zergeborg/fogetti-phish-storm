@@ -49,15 +49,30 @@ public class PhishTopologyBuilder {
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(16)
 			.setNumTasks(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 16)
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
             .allGrouping("urlsource")
             .setNumTasks(64);
-		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
+		builder.setBolt("googletrends-0", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
 		    .addConfiguration("timeout", 15000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
-			.setNumTasks(1024);
+			.setNumTasks(256);
+        builder.setBolt("googletrends-1", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 15000)
+            .fieldsGrouping("urlmatch", new Fields("word", "url"))
+            .setNumTasks(256);
+        builder.setBolt("googletrends-2", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 15000)
+            .fieldsGrouping("urlmatch", new Fields("word", "url"))
+            .setNumTasks(256);
+        builder.setBolt("googletrends-3", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 15000)
+            .fieldsGrouping("urlmatch", new Fields("word", "url"))
+            .setNumTasks(256);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
-			.shuffleGrouping("googletrends")
+			.shuffleGrouping("googletrends-0")
+			.shuffleGrouping("googletrends-1")
+			.shuffleGrouping("googletrends-2")
+			.shuffleGrouping("googletrends-3")
 			.setNumTasks(128);
         builder.setBolt("intersection", intersectionBolt(poolConfig), 32)
             .shuffleGrouping("urlsource", INTERSECTION_STREAM)
