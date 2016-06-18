@@ -55,10 +55,10 @@ public class PhishTopologyBuilder {
 		    .addConfiguration("timeout", 30000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(1024);
-		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig, resultDataFile), 32)
+		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
 			.shuffleGrouping("googletrends")
 			.setNumTasks(128);
-        builder.setBolt("intersection", intersectionBolt(poolConfig, resultDataFile), 32)
+        builder.setBolt("intersection", intersectionBolt(poolConfig), 32)
             .shuffleGrouping("urlsource", INTERSECTION_STREAM)
             .setNumTasks(128);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile))
@@ -67,12 +67,12 @@ public class PhishTopologyBuilder {
 		return topology;
 	}
 
-    private static SegmentSavingBolt segmentSavingBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
+    private static SegmentSavingBolt segmentSavingBolt(JedisPoolConfig poolConfig) throws Exception {
         SegmentSavingBolt callback = new SegmentSavingBolt(poolConfig);
         return callback;
     }
 
-    private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig, String resultDataFile) throws Exception {
+    private static IntersectionBolt intersectionBolt(JedisPoolConfig poolConfig) throws Exception {
 		IntersectionBolt callback = new IntersectionBolt(poolConfig);
 		return callback;
 	}

@@ -9,6 +9,7 @@
 	<description>Implementation of the paper "PhishStorm: Detecting Phishing with Streaming Analytics" found in https://orbilu.uni.lu/bitstream/10993/20053/1/phishStorm-revised.pdf</description>
 
 	<properties>
+		<phish.version>0.0.1-SNAPSHOT</phish.version>
 		<storm.version>1.0.1</storm.version>
 	</properties>
 
@@ -113,6 +114,11 @@
 	</build>
 
 	<dependencies>
+		<dependency>
+			<groupId>fogetti-phish-core</groupId>
+			<artifactId>fogetti-phish-core</artifactId>
+			<version>${phish.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
