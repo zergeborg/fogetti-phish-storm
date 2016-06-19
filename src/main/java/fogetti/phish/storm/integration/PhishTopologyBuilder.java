@@ -50,11 +50,11 @@ public class PhishTopologyBuilder {
 			.setNumTasks(1);
         builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 16)
             .allGrouping("urlsource")
-            .setNumTasks(64);
+            .setNumTasks(16);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 2048)
-		    .addConfiguration("timeout", 60000)
+		    .addConfiguration("timeout", 5000)
 		    .shuffleGrouping("urlmatch")
-			.setNumTasks(4096);
+			.setNumTasks(2048);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
 			.shuffleGrouping("googletrends")
 			.setNumTasks(128);
