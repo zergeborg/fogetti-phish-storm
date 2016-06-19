@@ -49,11 +49,11 @@ public class PhishTopologyBuilder {
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(16)
 			.setNumTasks(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 16)
             .allGrouping("urlsource")
             .setNumTasks(64);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 2048)
-		    .addConfiguration("timeout", 45000)
+		    .addConfiguration("timeout", 5000)
 		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
 			.setNumTasks(4096);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)

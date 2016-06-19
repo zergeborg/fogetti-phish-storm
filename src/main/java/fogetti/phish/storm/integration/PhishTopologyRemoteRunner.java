@@ -12,7 +12,7 @@ public class PhishTopologyRemoteRunner {
 		
 		Config config = new Config();
 		config.setNumWorkers(17);
-		config.setMessageTimeoutSecs(60);
+		config.setMessageTimeoutSecs(25);
 		config.put(Config.TOPOLOGY_EXECUTOR_RECEIVE_BUFFER_SIZE,
 	               new Integer(16384));
 	    config.put(Config.TOPOLOGY_EXECUTOR_SEND_BUFFER_SIZE,
