@@ -46,11 +46,11 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
-			.setMaxSpoutPending(10)
+			.setMaxSpoutPending(5)
 			.setNumTasks(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 4)
             .allGrouping("urlsource")
-            .setNumTasks(8);
+            .setNumTasks(4);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 2048)
 		    .addConfiguration("timeout", 5000)
 		    .shuffleGrouping("urlmatch")
