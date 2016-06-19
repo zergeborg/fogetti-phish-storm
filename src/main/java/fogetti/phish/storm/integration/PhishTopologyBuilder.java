@@ -9,7 +9,6 @@ import org.apache.storm.generated.StormTopology;
 import org.apache.storm.redis.common.config.JedisPoolConfig;
 import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.tuple.Fields;
 
 import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.ClientBuildingGoogleSemBolt;
@@ -54,7 +53,7 @@ public class PhishTopologyBuilder {
             .setNumTasks(64);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 2048)
 		    .addConfiguration("timeout", 15000)
-		    .fieldsGrouping("urlmatch", new Fields("word", "url"))
+		    .shuffleGrouping("urlmatch")
 			.setNumTasks(4096);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
 			.shuffleGrouping("googletrends")
