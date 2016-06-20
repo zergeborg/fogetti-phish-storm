@@ -72,15 +72,27 @@ public class PhishTopologyBuilder {
         builder.setBolt("urlmatch-3", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .allGrouping("urlsource-3")
             .setNumTasks(1);
-		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
+		builder.setBolt("googletrends-0", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
 		    .addConfiguration("timeout", 5000)
 		    .shuffleGrouping("urlmatch-0")
-		    .shuffleGrouping("urlmatch-1")
-		    .shuffleGrouping("urlmatch-2")
-		    .shuffleGrouping("urlmatch-3")
-			.setNumTasks(512);
+			.setNumTasks(128);
+        builder.setBolt("googletrends-1", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 5000)
+            .shuffleGrouping("urlmatch-1")
+            .setNumTasks(128);
+        builder.setBolt("googletrends-2", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 5000)
+            .shuffleGrouping("urlmatch-2")
+            .setNumTasks(128);
+        builder.setBolt("googletrends-3", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 128)
+            .addConfiguration("timeout", 5000)
+            .shuffleGrouping("urlmatch-3")
+            .setNumTasks(128);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
-			.shuffleGrouping("googletrends")
+			.shuffleGrouping("googletrends-0")
+			.shuffleGrouping("googletrends-1")
+			.shuffleGrouping("googletrends-2")
+			.shuffleGrouping("googletrends-3")
 			.setNumTasks(32);
         builder.setBolt("intersection", intersectionBolt(poolConfig), 32)
             .shuffleGrouping("urlsource-0", INTERSECTION_STREAM)
