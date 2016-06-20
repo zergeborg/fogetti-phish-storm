@@ -48,13 +48,13 @@ public class PhishTopologyBuilder {
 			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(5)
 			.setNumTasks(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 64)
+        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 4)
             .allGrouping("urlsource")
-            .setNumTasks(64);
-		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 2048)
+            .setNumTasks(4);
+		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
 		    .addConfiguration("timeout", 5000)
 		    .shuffleGrouping("urlmatch")
-			.setNumTasks(2048);
+			.setNumTasks(512);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
 			.shuffleGrouping("googletrends")
 			.setNumTasks(32);
