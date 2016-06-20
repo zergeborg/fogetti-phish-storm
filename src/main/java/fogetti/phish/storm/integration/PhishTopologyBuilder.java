@@ -109,6 +109,10 @@ public class PhishTopologyBuilder {
 			.shuffleGrouping("googletrends-1")
 			.shuffleGrouping("googletrends-2")
 			.shuffleGrouping("googletrends-3")
+            .shuffleGrouping("googletrends-4")
+            .shuffleGrouping("googletrends-5")
+            .shuffleGrouping("googletrends-6")
+            .shuffleGrouping("googletrends-7")
 			.setNumTasks(32);
         builder.setBolt("intersection", intersectionBolt(poolConfig), 32)
             .shuffleGrouping("urlsource-0", INTERSECTION_STREAM)
