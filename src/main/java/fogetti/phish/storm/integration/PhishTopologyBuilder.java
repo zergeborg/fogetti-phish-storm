@@ -83,10 +83,16 @@ public class PhishTopologyBuilder {
 			.shuffleGrouping("googletrends")
 			.setNumTasks(32);
         builder.setBolt("intersection", intersectionBolt(poolConfig), 32)
-            .shuffleGrouping("urlsource", INTERSECTION_STREAM)
+            .shuffleGrouping("urlsource-0", INTERSECTION_STREAM)
+            .shuffleGrouping("urlsource-1", INTERSECTION_STREAM)
+            .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
+            .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile), 1)
-            .globalGrouping("urlsource", SUCCESS_STREAM)
+            .globalGrouping("urlsource-0", SUCCESS_STREAM)
+            .globalGrouping("urlsource-1", SUCCESS_STREAM)
+            .globalGrouping("urlsource-2", SUCCESS_STREAM)
+            .globalGrouping("urlsource-3", SUCCESS_STREAM)
             .setNumTasks(1);
 		StormTopology topology = builder.createTopology();
 		return topology;
