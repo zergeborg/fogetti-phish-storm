@@ -45,15 +45,39 @@ public class PhishTopologyBuilder {
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
-			.setSpout("urlsource", new URLSpout(urlDataFile, poolConfig), 1)
+			.setSpout("urlsource-0", new URLSpout(urlDataFile, poolConfig), 1)
 			.setMaxSpoutPending(5)
 			.setNumTasks(1);
-        builder.setBolt("urlmatch", new MatcherBolt(countDataFile, psDataFile, poolConfig), 4)
-            .allGrouping("urlsource")
-            .setNumTasks(4);
+        builder
+            .setSpout("urlsource-1", new URLSpout(urlDataFile, poolConfig), 1)
+            .setMaxSpoutPending(5)
+            .setNumTasks(1);
+        builder
+            .setSpout("urlsource-2", new URLSpout(urlDataFile, poolConfig), 1)
+            .setMaxSpoutPending(5)
+            .setNumTasks(1);
+        builder
+            .setSpout("urlsource-3", new URLSpout(urlDataFile, poolConfig), 1)
+            .setMaxSpoutPending(5)
+            .setNumTasks(1);
+        builder.setBolt("urlmatch-0", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
+            .allGrouping("urlsource-0")
+            .setNumTasks(1);
+        builder.setBolt("urlmatch-1", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
+            .allGrouping("urlsource-1")
+            .setNumTasks(1);
+        builder.setBolt("urlmatch-2", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
+            .allGrouping("urlsource-2")
+            .setNumTasks(1);
+        builder.setBolt("urlmatch-3", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
+            .allGrouping("urlsource-3")
+            .setNumTasks(1);
 		builder.setBolt("googletrends", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 512)
 		    .addConfiguration("timeout", 5000)
-		    .shuffleGrouping("urlmatch")
+		    .shuffleGrouping("urlmatch-0")
+		    .shuffleGrouping("urlmatch-1")
+		    .shuffleGrouping("urlmatch-2")
+		    .shuffleGrouping("urlmatch-3")
 			.setNumTasks(512);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 32)
 			.shuffleGrouping("googletrends")
