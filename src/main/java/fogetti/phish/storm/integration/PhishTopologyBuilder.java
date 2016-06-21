@@ -149,12 +149,12 @@ public class PhishTopologyBuilder {
             .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
             .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
-        builder.setBolt("alexa", alexaBolt(proxyDataFile), 1)
+        builder.setBolt("alexa", alexaBolt(proxyDataFile), 8)
             .globalGrouping("urlsource-0", SUCCESS_STREAM)
             .globalGrouping("urlsource-1", SUCCESS_STREAM)
             .globalGrouping("urlsource-2", SUCCESS_STREAM)
             .globalGrouping("urlsource-3", SUCCESS_STREAM)
-            .setNumTasks(1);
+            .setNumTasks(8);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile), 1)
             .shuffleGrouping("alexa")
             .setNumTasks(1);
