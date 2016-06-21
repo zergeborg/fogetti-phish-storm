@@ -14,6 +14,7 @@ import fogetti.phish.storm.client.WrappedRequest;
 import fogetti.phish.storm.relatedness.ClientBuildingGoogleSemBolt;
 import fogetti.phish.storm.relatedness.MatcherBolt;
 import fogetti.phish.storm.relatedness.URLSpout;
+import fogetti.phish.storm.relatedness.intersection.AlexaRankingBolt;
 import fogetti.phish.storm.relatedness.intersection.IntersectionBolt;
 import fogetti.phish.storm.relatedness.intersection.ResultBolt;
 import fogetti.phish.storm.relatedness.intersection.SegmentSavingBolt;
@@ -148,11 +149,14 @@ public class PhishTopologyBuilder {
             .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
             .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
-        builder.setBolt("result", resultBolt(poolConfig, resultDataFile), 1)
+        builder.setBolt("alexa", alexaBolt(proxyDataFile), 1)
             .globalGrouping("urlsource-0", SUCCESS_STREAM)
             .globalGrouping("urlsource-1", SUCCESS_STREAM)
             .globalGrouping("urlsource-2", SUCCESS_STREAM)
             .globalGrouping("urlsource-3", SUCCESS_STREAM)
+            .setNumTasks(1);
+        builder.setBolt("result", resultBolt(poolConfig, resultDataFile), 1)
+            .shuffleGrouping("alexa")
             .setNumTasks(1);
 		StormTopology topology = builder.createTopology();
 		return topology;
@@ -167,6 +171,10 @@ public class PhishTopologyBuilder {
 		IntersectionBolt callback = new IntersectionBolt(poolConfig);
 		return callback;
 	}
+
+    private static AlexaRankingBolt alexaBolt(String proxyDataFile) {
+        return new AlexaRankingBolt(proxyDataFile);
+    }
 
     private static IRichBolt resultBolt(JedisPoolConfig config, String resultDataFile) {
         return new ResultBolt(config, resultDataFile);
