@@ -149,7 +149,7 @@ public class PhishTopologyBuilder {
             .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
             .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
-        builder.setBolt("alexa", alexaBolt(proxyDataFile), 8)
+        builder.setBolt("alexa", alexaBolt(poolConfig, proxyDataFile), 8)
             .globalGrouping("urlsource-0", SUCCESS_STREAM)
             .globalGrouping("urlsource-1", SUCCESS_STREAM)
             .globalGrouping("urlsource-2", SUCCESS_STREAM)
@@ -172,8 +172,8 @@ public class PhishTopologyBuilder {
 		return callback;
 	}
 
-    private static AlexaRankingBolt alexaBolt(String proxyDataFile) {
-        return new AlexaRankingBolt(proxyDataFile);
+    private static AlexaRankingBolt alexaBolt(JedisPoolConfig config, String proxyDataFile) {
+        return new AlexaRankingBolt(config, proxyDataFile);
     }
 
     private static IRichBolt resultBolt(JedisPoolConfig config, String resultDataFile) {
