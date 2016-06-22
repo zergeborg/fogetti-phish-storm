@@ -14,7 +14,7 @@ public class TopologyEnd2End {
 		String urlDataFile = "/Users/fogetti/Work/fogetti-phish-storm/src/main/resources/url-list.txt";
         String proxyDataFile = "/Users/fogetti/Work/proxy-check/[unique-proxies]elite_proxies_2016_06_03.txt";
 		String resultDataFile = "/Users/fogetti/Work/phishing-result.csv";
-		StormTopology topology = PhishTopologyBuilder.build(countDataFile, psDataFile, urlDataFile, proxyDataFile, resultDataFile, "localhost", 6379, null);
+		StormTopology topology = PhishTopologyBuilder.build(countDataFile, psDataFile, urlDataFile, proxyDataFile, resultDataFile, "localhost", 6379, null, null, null);
 		PhishTopologyLocalRunner.run(args, topology);
 		server.stop();
 	}

@@ -8,7 +8,9 @@ import org.apache.storm.metric.LoggingMetricsConsumer;
 public class PhishTopologyRemoteRunner {
 
 	public static void main(String[] args) throws Exception {
-		StormTopology topology = PhishTopologyBuilder.build();
+	    String accessKey = args[0];
+	    String secretKey = args[1];
+		StormTopology topology = PhishTopologyBuilder.build(accessKey, secretKey);
 		
 		Config config = new Config();
 		config.setNumWorkers(17);

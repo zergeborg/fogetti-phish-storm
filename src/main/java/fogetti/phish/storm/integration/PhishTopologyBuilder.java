@@ -23,13 +23,13 @@ public class PhishTopologyBuilder {
 
     public static final String REDIS_SEGMENT_PREFIX = "segment:"; 
     
-	public static StormTopology build() throws Exception {
+	public static StormTopology build(String accessKey, String secretKey) throws Exception {
 		String countDataFile = System.getProperty("count.data.file");
 		String psDataFile = System.getProperty("ps.data.file");
 		String urlDataFile = System.getProperty("url.data.file");
 		String proxyDataFile = System.getProperty("proxy.data.file");
 		String resultDataFile = System.getProperty("result.data.file");
-		return build(countDataFile, psDataFile, urlDataFile, proxyDataFile, resultDataFile, "petrucci", 6379, "Macska12");
+		return build(countDataFile, psDataFile, urlDataFile, proxyDataFile, resultDataFile, "petrucci", 6379, "Macska12", accessKey, secretKey);
 	}
 
 	public static StormTopology build(
@@ -40,7 +40,9 @@ public class PhishTopologyBuilder {
 	        String resultDataFile,
 	        String redishost,
 	        Integer redisport,
-	        String redispword) throws Exception {
+	        String redispword,
+	        String accessKey,
+	        String secretKey) throws Exception {
 		TopologyBuilder builder = new TopologyBuilder();
 
 		JedisPoolConfig poolConfig = new JedisPoolConfig.Builder()
@@ -149,7 +151,7 @@ public class PhishTopologyBuilder {
             .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
             .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
-        builder.setBolt("alexa", alexaBolt(poolConfig, proxyDataFile), 16)
+        builder.setBolt("alexa", alexaBolt(poolConfig, accessKey, secretKey), 16)
             .shuffleGrouping("urlsource-0", SUCCESS_STREAM)
             .shuffleGrouping("urlsource-1", SUCCESS_STREAM)
             .shuffleGrouping("urlsource-2", SUCCESS_STREAM)
@@ -172,8 +174,8 @@ public class PhishTopologyBuilder {
 		return callback;
 	}
 
-    private static AlexaRankingBolt alexaBolt(JedisPoolConfig config, String proxyDataFile) {
-        return new AlexaRankingBolt(config, proxyDataFile);
+    private static AlexaRankingBolt alexaBolt(JedisPoolConfig config, String accessKey, String secretKey) {
+        return new AlexaRankingBolt(config, accessKey, secretKey);
     }
 
     private static IRichBolt resultBolt(JedisPoolConfig config, String resultDataFile) {
