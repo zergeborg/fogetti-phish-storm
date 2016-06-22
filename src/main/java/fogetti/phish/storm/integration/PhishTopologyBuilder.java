@@ -47,35 +47,35 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource-0", new URLSpout(urlDataFile, poolConfig), 1)
-			.setMaxSpoutPending(5)
+			.setMaxSpoutPending(15)
 			.setNumTasks(1);
         builder
             .setSpout("urlsource-1", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-2", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-3", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-4", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-5", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-6", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-7", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder.setBolt("urlmatch-0", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
             .allGrouping("urlsource-0")
@@ -149,12 +149,12 @@ public class PhishTopologyBuilder {
             .shuffleGrouping("urlsource-2", INTERSECTION_STREAM)
             .shuffleGrouping("urlsource-3", INTERSECTION_STREAM)
             .setNumTasks(32);
-        builder.setBolt("alexa", alexaBolt(poolConfig, proxyDataFile), 8)
-            .globalGrouping("urlsource-0", SUCCESS_STREAM)
-            .globalGrouping("urlsource-1", SUCCESS_STREAM)
-            .globalGrouping("urlsource-2", SUCCESS_STREAM)
-            .globalGrouping("urlsource-3", SUCCESS_STREAM)
-            .setNumTasks(8);
+        builder.setBolt("alexa", alexaBolt(poolConfig, proxyDataFile), 16)
+            .shuffleGrouping("urlsource-0", SUCCESS_STREAM)
+            .shuffleGrouping("urlsource-1", SUCCESS_STREAM)
+            .shuffleGrouping("urlsource-2", SUCCESS_STREAM)
+            .shuffleGrouping("urlsource-3", SUCCESS_STREAM)
+            .setNumTasks(16);
         builder.setBolt("result", resultBolt(poolConfig, resultDataFile), 1)
             .shuffleGrouping("alexa")
             .setNumTasks(1);
