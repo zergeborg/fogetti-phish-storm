@@ -2,7 +2,6 @@ package fogetti.phish.storm.integration;
 
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
-import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
@@ -15,18 +14,7 @@ public class PhishTopologyLocalRunner {
 			throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
 		Config conf = new Config();
 		conf.setMessageTimeoutSecs(90);
-		if (args != null && args.length > 0) {
-			runWithProgressbar(args, topology, conf);
-		}
-		else {
-			runSimply(topology, conf);
-		}
-	}
-
-	private static void runWithProgressbar(String[] args, StormTopology topology, Config conf)
-			throws AlreadyAliveException, InvalidTopologyException, AuthorizationException {
-		conf.setNumWorkers(3);
-		StormSubmitter.submitTopologyWithProgressBar(args[0], conf, topology);
+		runSimply(topology, conf);
 	}
 
 	private static void runSimply(StormTopology topology, Config conf) {
