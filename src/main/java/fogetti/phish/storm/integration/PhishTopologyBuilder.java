@@ -79,30 +79,30 @@ public class PhishTopologyBuilder {
             .setSpout("urlsource-7", new URLSpout(urlDataFile, poolConfig), 1)
             .setMaxSpoutPending(5)
             .setNumTasks(1);
-        builder.setBolt("urlmatch-0", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-0")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-1", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-1")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-2", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-2")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-3", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-3")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-4", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-4")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-5", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-5")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-6", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-6")
-            .setNumTasks(1);
-        builder.setBolt("urlmatch-7", new MatcherBolt(countDataFile, psDataFile, poolConfig), 1)
-            .allGrouping("urlsource-7")
-            .setNumTasks(1);
+        builder.setBolt("urlmatch-0", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-0")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-1", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-1")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-2", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-2")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-3", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-3")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-8", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-8")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-5", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-5")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-6", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-6")
+            .setNumTasks(8);
+        builder.setBolt("urlmatch-7", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-7")
+            .setNumTasks(8);
 		builder.setBolt("googletrends-0", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 64)
 		    .addConfiguration("timeout", 15000)
 		    .shuffleGrouping("urlmatch-0")
