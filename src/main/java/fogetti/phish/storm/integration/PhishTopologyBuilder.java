@@ -137,35 +137,35 @@ public class PhishTopologyBuilder {
             .setNumTasks(16);
         builder.setBolt("googletrends-8", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-8")
+            .shuffleGrouping("urlmatch-0")
             .setNumTasks(16);
         builder.setBolt("googletrends-9", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-9")
+            .shuffleGrouping("urlmatch-1")
             .setNumTasks(16);
         builder.setBolt("googletrends-10", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-10")
+            .shuffleGrouping("urlmatch-2")
             .setNumTasks(16);
         builder.setBolt("googletrends-11", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-11")
+            .shuffleGrouping("urlmatch-3")
             .setNumTasks(16);
         builder.setBolt("googletrends-12", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-12")
+            .shuffleGrouping("urlmatch-4")
             .setNumTasks(16);
         builder.setBolt("googletrends-13", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-13")
+            .shuffleGrouping("urlmatch-5")
             .setNumTasks(16);
         builder.setBolt("googletrends-14", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-14")
+            .shuffleGrouping("urlmatch-6")
             .setNumTasks(16);
         builder.setBolt("googletrends-15", new ClientBuildingGoogleSemBolt(poolConfig, new File(proxyDataFile), new WrappedRequest()), 16)
             .addConfiguration("timeout", 15000)
-            .shuffleGrouping("urlmatch-15")
+            .shuffleGrouping("urlmatch-7")
             .setNumTasks(16);
 		builder.setBolt("segmentsaving", segmentSavingBolt(poolConfig), 64)
 			.shuffleGrouping("googletrends-0")
