@@ -91,8 +91,8 @@ public class PhishTopologyBuilder {
         builder.setBolt("urlmatch-3", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
             .shuffleGrouping("urlsource-3")
             .setNumTasks(8);
-        builder.setBolt("urlmatch-8", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
-            .shuffleGrouping("urlsource-8")
+        builder.setBolt("urlmatch-4", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
+            .shuffleGrouping("urlsource-4")
             .setNumTasks(8);
         builder.setBolt("urlmatch-5", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
             .shuffleGrouping("urlsource-5")
