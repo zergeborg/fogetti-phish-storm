@@ -49,35 +49,35 @@ public class PhishTopologyBuilder {
 	        .setHost(redishost).setPort(redisport).setPassword(redispword).build();
 		builder
 			.setSpout("urlsource-0", new URLSpout(urlDataFile, poolConfig), 1)
-			.setMaxSpoutPending(5)
+			.setMaxSpoutPending(15)
 			.setNumTasks(1);
         builder
             .setSpout("urlsource-1", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-2", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-3", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-4", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-5", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-6", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder
             .setSpout("urlsource-7", new URLSpout(urlDataFile, poolConfig), 1)
-            .setMaxSpoutPending(5)
+            .setMaxSpoutPending(15)
             .setNumTasks(1);
         builder.setBolt("urlmatch-0", new MatcherBolt(countDataFile, psDataFile, poolConfig), 8)
             .shuffleGrouping("urlsource-0")
